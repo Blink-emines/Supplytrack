@@ -1,0 +1,115 @@
+{% extends "layout.html" %}
+{% load static %}
+
+{% block title %}Détails du flux - SupplyTrack{% endblock %}
+
+{% block content %}
+<div class="top-nav">
+    <a href="javascript:history.back()" class="btn-back">
+        <span class="material-icons-outlined">arrow_back</span> Retour
+    </a>
+    <h1 class="page-title">
+        Détails du flux ISE {{ ise.id_ise }} / {{ article.code_article }}
+        {% if rel_cmd.cde.id_Cde != 'En attente' and rel_cmd.cde.id_Cde != 'N/A' %}
+            <span class="status-badge status-valid">Validé</span>
+        {% elif rel_ao.ao.id_AO != 'N/A' and rel_ao.ao.id_AO != '0' %}
+            <span class="status-badge status-processing">En cours</span>
+        {% else %}
+            <span class="status-badge status-waiting">En attente</span>
+        {% endif %}
+    </h1>
+</div>
+
+<div class="cards-grid">
+    <div class="status-card card-ise">
+        <div class="card-header"><div class="card-icon bg-ise">ISE</div><div class="card-label">ISE</div></div>
+        <div class="data-row"><span class="data-label">ID</span><span class="data-value">{{ ise.id_ise }}</span></div>
+        <div class="data-row"><span class="data-label">Date</span><span class="data-value">{{ rel_ise.date_ise|date:"d/m/Y" }}</span></div>
+        <div class="data-row"><span class="data-label">Montant</span><span class="data-value money text-green">{{ rel_ise.montant_ise|floatformat:2 }} MAD</span></div>
+    </div>
+
+    <div class="status-card card-da">
+        <div class="card-header"><div class="card-icon bg-da">DA</div><div class="card-label">DA</div></div>
+        <div class="data-row"><span class="data-label">ID</span><span class="data-value">{{ rel_da.da.id_DA|default:"N/A" }}</span></div>
+        <div class="data-row"><span class="data-label">Date</span><span class="data-value">{{ rel_da.date_DA|date:"d/m/Y"|default:"-" }}</span></div>
+        <div class="data-row"><span class="data-label">Montant</span><span class="data-value money color-da">{{ rel_da.montant_DA|floatformat:2|default:"-" }} MAD</span></div>
+    </div>
+
+    <div class="status-card card-ao">
+        <div class="card-header"><div class="card-icon bg-ao">AO</div><div class="card-label">AO</div></div>
+        <div class="data-row"><span class="data-label">ID Dossier</span><span class="data-value">{{ rel_ao.ao.id_AO|default:"N/A" }}</span></div>
+        <div class="data-row"><span class="data-label">Date</span><span class="data-value">{{ rel_ao.date_AO|date:"d/m/Y"|default:"-" }}</span></div>
+    </div>
+
+    <div class="status-card card-cmd">
+        <div class="card-header"><div class="card-icon bg-cmd">CMD</div><div class="card-label">Commande</div></div>
+        <div class="data-row"><span class="data-label">ID</span><span class="data-value">{{ rel_cmd.cde.id_Cde|default:"N/A" }}</span></div>
+        <div class="data-row"><span class="data-label">Date</span><span class="data-value">{{ rel_cmd.date_Cde|date:"d/m/Y"|default:"-" }}</span></div>
+        <div class="data-row"><span class="data-label">Montant TTC</span><span class="data-value money text-blue">{{ rel_cmd.montant_Cde|floatformat:2|default:"-" }} MAD</span></div>
+    </div>
+</div>
+
+<div class="card-container">
+    <h3 class="section-title">Informations supplémentaires</h3>
+    <div class="ident-box">
+        <div class="ident-grid">
+            <div class="ident-item"><label>Plant</label><span>{{ rel_plant.plant.code_plant|default:"N/A" }}</span></div>
+            <div class="ident-item"><label>UDM</label><span>{{ article.udm|default:"-" }}</span></div>
+            <div class="ident-item"><label>Fournisseur</label><span>{{ rel_cmd.fournisseur.designation_Fournisseur|default:"En attente" }}</span></div>
+            <div class="ident-item"><label>SF</label><span>{{ article.famille }}</span></div>
+        </div>
+    </div>
+
+    <div class="desc-box">
+        <div class="analysis-header">Description et destination</div>
+        <div class="desc-item"><label>Désignation Article</label><span>{{ article.designation_article }}</span></div>
+        <div class="desc-item"><label>Service / Division</label><span>{{ rel_plant.plant.designation_plant|default:"Non spécifié" }}</span></div>
+        <div class="desc-item"><label>Observations</label><span>{{ article.destination|default:"Non spécifié" }}</span></div>
+    </div>
+</div>
+
+<div class="financial-card">
+    <h2 class="card-title">Récapitulatif financier</h2>
+    <div class="financial-grid">
+        <div class="financial-item"><label>Budget estimé (ISE)</label><span class="item-value">{{ rel_ise.montant_ise|floatformat:2 }} MAD</span></div>
+        <div class="financial-item"><label>Budget DA</label><span class="item-value">{{ rel_da.montant_DA|floatformat:2|default:"0.00" }} MAD</span></div>
+        <div class="financial-item"><label>Montant Commande</label><span class="item-value">{{ rel_cmd.montant_Cde|floatformat:2|default:"0.00" }} MAD</span></div>
+        <div class="financial-item">
+            <label>Écart total</label>
+            <span class="item-value {% if ecart_total > 0 %}value-red{% else %}value-green{% endif %}">
+                {% if ecart_total > 0 %}+{% endif %}{{ ecart_total|floatformat:2 }} MAD
+            </span>
+        </div>
+        <div class="financial-item"><label>Taux de réalisation</label><span class="item-value value-green">{{ taux_realisation|floatformat:1 }}%</span></div>
+    </div>
+</div>
+
+<div class="card-container">
+    <h3 class="section-title">Chronologie du flux</h3>
+    <div class="timeline-wrapper">
+        <div class="timeline-line"></div>
+        <div class="timeline-step step-completed">
+            <div class="step-circle">1</div><div class="step-label">ISE</div><div class="step-date">{{ rel_ise.date_ise|date:"d/m/Y" }}</div>
+        </div>
+        <div class="timeline-step {% if rel_da.da.id_DA %}step-completed{% else %}step-todo{% endif %}">
+            <div class="step-circle">2</div><div class="step-label">DA</div><div class="step-date">{{ rel_da.date_DA|date:"d/m/Y"|default:"-" }}</div>
+        </div>
+        <div class="timeline-step {% if rel_ao.ao.id_AO %}step-completed{% else %}step-todo{% endif %}">
+            <div class="step-circle">3</div><div class="step-label">AO</div><div class="step-date">{{ rel_ao.date_AO|date:"d/m/Y"|default:"-" }}</div>
+        </div>
+        <div class="timeline-step {% if rel_cmd.cde.id_Cde != 'En attente' %}step-completed{% else %}step-todo{% endif %}">
+            <div class="step-circle">4</div><div class="step-label">CMD</div><div class="step-date">{{ rel_cmd.date_Cde|date:"d/m/Y"|default:"-" }}</div>
+        </div>
+    </div>
+</div>
+
+<div class="delays-card">
+    <h2 class="card-title">Délais de traitement</h2>
+    <div class="delays-grid">
+        <div class="delay-item"><label>ISE → DA</label><div class="delay-value">{% if delai_ise_da %}{{ delai_ise_da }} jours{% else %}-{% endif %}</div></div>
+        <div class="delay-item"><label>DA → AO</label><div class="delay-value">{% if delai_da_ao %}{{ delai_da_ao }} jours{% else %}-{% endif %}</div></div>
+        <div class="delay-item"><label>AO → CMD</label><div class="delay-value">{% if delai_ao_cmd %}{{ delai_ao_cmd }} jours{% else %}-{% endif %}</div></div>
+        <div class="delay-item"><label>Délai total</label><div class="delay-value total">{% if delai_total %}{{ delai_total }} jours{% else %}-{% endif %}</div></div>
+    </div>
+</div>
+{% endblock %}

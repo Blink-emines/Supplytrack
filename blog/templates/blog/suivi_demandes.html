@@ -1,0 +1,419 @@
+{% extends "layout.html" %}
+
+{% block title %}Suivi des demandes - SupplyTrack{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Suivi des demandes</h1>
+    <p>Recherchez et tracez le flux complet ISE → DA → AO → Commande</p>
+</div>
+
+<div class="card-container">
+    <div class="import-title">
+        <span class="material-icons-outlined">upload_file</span> Importer fichier
+    </div>
+    <div class="import-buttons">
+        <input type="file" id="file-ise" class="file-input" accept=".xlsx,.xls">
+        <button class="btn-import" onclick="triggerFileInput('ise')">Importer ISE</button>
+
+        <input type="file" id="file-da" class="file-input" accept=".xlsx,.xls">
+        <button class="btn-import" onclick="triggerFileInput('da')">Importer DA</button>
+
+        <input type="file" id="file-ao" class="file-input" accept=".xlsx,.xls">
+        <button class="btn-import" onclick="triggerFileInput('ao')">Importer AO</button>
+
+        <input type="file" id="file-cmd" class="file-input" accept=".xlsx,.xls">
+        <button class="btn-import" onclick="triggerFileInput('cmd')">Importer CMD</button>
+
+        <button class="btn-import btn-history" onclick="openHistoryModal()">
+            <span class="material-icons-outlined">history</span> Historique
+        </button>
+    </div>
+    <span class="format-info">Formats acceptés : .xlsx, .xls</span>
+    <div id="status-message" class="status-message"></div>
+</div>
+
+<div class="card-container">
+    <div class="import-title">
+        <span class="material-icons-outlined">search</span> Recherche de flux
+    </div>
+
+    <form method="POST">
+        {% csrf_token %}
+        <label class="search-label">Type d'identifiant</label>
+        <div class="type-selector">
+            <div class="type-btn active" onclick="selectType('ISE')">ISE</div>
+            <div class="type-btn" onclick="selectType('DA')">DA</div>
+            <div class="type-btn" onclick="selectType('AO')">AO</div>
+            <div class="type-btn" onclick="selectType('CMD')">CMD</div>
+        </div>
+
+        <input type="hidden" name="type_doc" id="hidden_type" value="ISE">
+        <label class="search-label" id="label-id">Identifiant ISE</label>
+        <div class="search-group">
+            <input type="text" name="code_input" class="search-input" placeholder="Ex. 761" required>
+            <button type="submit" class="btn-search">Rechercher</button>
+        </div>
+    </form>
+
+    {% if resultat %}
+        <div class="result-area">
+            <hr class="separator">
+            <h3>Résultat pour {{ type_rech }} : {{ code_rech }}</h3>
+            <div class="table-wrapper">{{ resultat|safe }}</div>
+        </div>
+    {% endif %}
+    
+    {% if error %}
+        <p class="error-text">{{ error }}</p>
+    {% endif %}
+</div>
+
+<div id="historyModal" class="modal-overlay" onclick="closeHistoryModal(event)">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <div class="modal-header">
+            <h3><span class="material-icons-outlined">history</span> Historique des imports</h3>
+            <button class="modal-close" onclick="closeHistoryModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div id="historyContent">
+                <div class="loader-placeholder">
+                    <span class="material-icons-outlined">hourglass_empty</span>
+                    <p>Chargement...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        const csrftoken = getCookie('csrftoken');
+
+        function triggerFileInput(type) {
+            document.getElementById('file-' + type).click();
+        }
+
+        ['ise', 'da', 'ao', 'cmd'].forEach(type => {
+            document.getElementById('file-' + type).addEventListener('change', function(e) {
+                if (this.files.length > 0) {
+                    uploadFile(type, this.files[0]);
+                }
+            });
+        });
+
+        function uploadFile(type, file) {
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const statusDiv = document.getElementById('status-message');
+            const buttons = document.querySelectorAll('.btn-import');
+            
+            statusDiv.textContent = `⏳ Import de ${type.toUpperCase()} en cours...`;
+            statusDiv.className = 'status-message';
+            statusDiv.style.display = 'block';
+            statusDiv.style.background = '#fff3cd';
+            statusDiv.style.color = '#856404';
+            statusDiv.style.border = '1px solid #ffeaa7';
+
+            buttons.forEach(btn => btn.classList.add('loading'));
+
+            fetch(`/import/${type}/`, {
+                method: 'POST',
+                headers: { 'X-CSRFToken': csrftoken },
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                buttons.forEach(btn => btn.classList.remove('loading'));
+
+                if (data.success) {
+                    statusDiv.textContent = data.message;
+                    statusDiv.className = 'status-message success';
+                } else {
+                    statusDiv.textContent = data.message;
+                    statusDiv.className = 'status-message error';
+                }
+
+                setTimeout(() => { statusDiv.style.display = 'none'; }, 5000);
+                document.getElementById('file-' + type).value = '';
+            })
+            .catch(error => {
+                buttons.forEach(btn => btn.classList.remove('loading'));
+                statusDiv.textContent = `❌ Erreur réseau : ${error.message}`;
+                statusDiv.className = 'status-message error';
+                setTimeout(() => { statusDiv.style.display = 'none'; }, 5000);
+            });
+        }
+
+        function selectType(type) {
+            document.getElementById('hidden_type').value = type;
+            document.getElementById('label-id').innerText = 'Identifiant ' + type;
+            document.querySelectorAll('.type-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if(btn.innerText === type) btn.classList.add('active');
+            });
+        }
+
+        function viewDetails(element) {
+            let row = element.closest('tr');
+            
+            function cleanId(val) {
+                val = val.trim();
+                if (!val || val === '-' || val === '' || val === 'N/A' || val === 'nan' || val === 'None') {
+                    return '0'; 
+                }
+                return val;
+            }
+            
+            let codeArticle = cleanId(row.cells[0].innerText); 
+            let idIse = cleanId(row.cells[2].innerText);
+            let idDa = cleanId(row.cells[6].innerText); 
+            let idAo = cleanId(row.cells[10].innerText); 
+            let idCmd = cleanId(row.cells[12].innerText);
+
+            window.location.href = `/suivi/detail/${codeArticle}/${idIse}/${idDa}/${idAo}/${idCmd}/`; 
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(function() {
+                const table = document.querySelector('.result-area table');
+                if (table) {
+                    const headerRow = table.querySelector('thead tr');
+                    if (headerRow && !headerRow.querySelector('th:last-child')?.textContent.includes('ACTION')) {
+                        const actionHeader = document.createElement('th');
+                        actionHeader.textContent = 'ACTION';
+                        actionHeader.style.textAlign = 'center';
+                        headerRow.appendChild(actionHeader);
+                    }
+
+                    const rows = table.querySelectorAll('tbody tr');
+                    rows.forEach(function(row) {
+                        if (row.cells.length < headerRow?.cells.length) {
+                            const actionCell = document.createElement('td');
+                            actionCell.style.textAlign = 'center';
+                            actionCell.innerHTML = `
+                                <span class="material-icons-outlined eye-icon" 
+                                    onclick="viewDetails(this)" 
+                                    title="Voir les détails">
+                                    visibility
+                                </span>`;
+                            row.appendChild(actionCell);
+                        }
+                    });
+                }
+            }, 100);
+        });
+
+        // ✅ GESTION MODAL HISTORIQUE - 4 COLONNES
+        function openHistoryModal() {
+    document.getElementById('historyModal').classList.add('active'); // Changed from 'show' to 'active'
+    loadHistory();
+}
+
+function closeHistoryModal(event) {
+    if (!event || event.target.id === 'historyModal') {
+        document.getElementById('historyModal').classList.remove('active'); // Changed from 'show' to 'active'
+    }
+}
+
+function loadHistory() {
+    const contentDiv = document.getElementById('historyContent');
+    
+    contentDiv.innerHTML = `
+        <div style="text-align: center; padding: 40px; color: #999;">
+            <span class="material-icons-outlined" style="font-size: 48px; opacity: 0.3;">hourglass_empty</span>
+            <p>Chargement...</p>
+        </div>
+    `;
+    
+    fetch('/import/history/')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.data.length > 0) {
+                let html = '<table class="history-table"><thead><tr>';
+                html += '<th>Type</th>';
+                html += '<th>Fichier</th>';
+                html += '<th>Date d\'import</th>';
+                html += '<th>Statut</th>';
+                html += '</tr></thead><tbody>';
+                
+                data.data.forEach(imp => {
+                    html += '<tr>';
+                    html += `<td><span class="type-badge">${imp.type_fichier}</span></td>`;
+                    html += `<td style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${imp.nom_fichier}">${imp.nom_fichier}</td>`;
+                    html += `<td style="white-space: nowrap;">${imp.date_import}</td>`;
+                    
+                    let badgeClass = imp.statut === 'SUCCESS' ? 'success' : (imp.statut === 'ERROR' ? 'error' : 'partial');
+                    let badgeText = imp.statut === 'SUCCESS' ? 'Succès' : (imp.statut === 'ERROR' ? 'Erreur' : 'Partiel');
+                    html += `<td><span class="history-badge ${badgeClass}">${badgeText}</span></td>`;
+                    html += '</tr>';
+                });
+                
+                html += '</tbody></table>';
+                contentDiv.innerHTML = html;
+            } else {
+                contentDiv.innerHTML = `
+                    <div style="text-align: center; padding: 40px; color: #999;">
+                        <span class="material-icons-outlined" style="font-size: 48px; opacity: 0.3;">inbox</span>
+                        <p>Aucun historique d'import</p>
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            contentDiv.innerHTML = `
+                <div style="text-align: center; padding: 40px; color: #ef4444;">
+                    <span class="material-icons-outlined" style="font-size: 48px; opacity: 0.3;">error</span>
+                    <p>Erreur de chargement : ${error.message}</p>
+                </div>
+            `;
+        });
+}
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeHistoryModal();
+});
+
+        function openHistoryModal() {
+    document.getElementById('historyModal').classList.add('active'); // Changed from 'show' to 'active'
+    loadHistory();
+}
+
+function closeHistoryModal(event) {
+    if (!event || event.target.id === 'historyModal') {
+        document.getElementById('historyModal').classList.remove('active'); // Changed from 'show' to 'active'
+    }
+}
+
+function loadHistory() {
+    const contentDiv = document.getElementById('historyContent');
+    
+    contentDiv.innerHTML = `
+        <div style="text-align: center; padding: 40px; color: #999;">
+            <span class="material-icons-outlined" style="font-size: 48px; opacity: 0.3;">hourglass_empty</span>
+            <p>Chargement...</p>
+        </div>
+    `;
+    
+    fetch('/import/history/')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.data.length > 0) {
+                let html = '<table class="history-table"><thead><tr>';
+                html += '<th>Type</th>';
+                html += '<th>Fichier</th>';
+                html += '<th>Date d\'import</th>';
+                html += '<th>Statut</th>';
+                html += '</tr></thead><tbody>';
+                
+                data.data.forEach(imp => {
+                    html += '<tr>';
+                    html += `<td><span class="type-badge">${imp.type_fichier}</span></td>`;
+                    html += `<td style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${imp.nom_fichier}">${imp.nom_fichier}</td>`;
+                    html += `<td style="white-space: nowrap;">${imp.date_import}</td>`;
+                    
+                    let badgeClass = imp.statut === 'SUCCESS' ? 'success' : (imp.statut === 'ERROR' ? 'error' : 'partial');
+                    let badgeText = imp.statut === 'SUCCESS' ? 'Succès' : (imp.statut === 'ERROR' ? 'Erreur' : 'Partiel');
+                    html += `<td><span class="history-badge ${badgeClass}">${badgeText}</span></td>`;
+                    html += '</tr>';
+                });
+                
+                html += '</tbody></table>';
+                contentDiv.innerHTML = html;
+            } else {
+                contentDiv.innerHTML = `
+                    <div style="text-align: center; padding: 40px; color: #999;">
+                        <span class="material-icons-outlined" style="font-size: 48px; opacity: 0.3;">inbox</span>
+                        <p>Aucun historique d'import</p>
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            contentDiv.innerHTML = `
+                <div style="text-align: center; padding: 40px; color: #ef4444;">
+                    <span class="material-icons-outlined" style="font-size: 48px; opacity: 0.3;">error</span>
+                    <p>Erreur de chargement : ${error.message}</p>
+                </div>
+            `;
+        });
+}
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeHistoryModal();
+});
+
+        function loadHistory() {
+            const contentDiv = document.getElementById('historyContent');
+            
+            contentDiv.innerHTML = `
+                <div style="text-align: center; padding: 40px; color: #999;">
+                    <span class="material-icons-outlined" style="font-size: 48px; opacity: 0.3;">hourglass_empty</span>
+                    <p>Chargement...</p>
+                </div>
+            `;
+            
+            fetch('/import/history/')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.data.length > 0) {
+                        let html = '<table class="history-table"><thead><tr>';
+                        html += '<th>Type</th>';
+                        html += '<th>Fichier</th>';
+                        html += '<th>Date d\'import</th>';
+                        html += '<th>Statut</th>';
+                        html += '</tr></thead><tbody>';
+                        
+                        data.data.forEach(imp => {
+                            html += '<tr>';
+                            html += `<td><span class="type-badge">${imp.type_fichier}</span></td>`;
+                            html += `<td style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${imp.nom_fichier}">${imp.nom_fichier}</td>`;
+                            html += `<td style="white-space: nowrap;">${imp.date_import}</td>`;
+                            
+                            let badgeClass = imp.statut === 'SUCCESS' ? 'success' : (imp.statut === 'ERROR' ? 'error' : 'partial');
+                            let badgeText = imp.statut === 'SUCCESS' ? 'Succès' : (imp.statut === 'ERROR' ? 'Erreur' : 'Partiel');
+                            html += `<td><span class="history-badge ${badgeClass}">${badgeText}</span></td>`;
+                            html += '</tr>';
+                        });
+                        
+                        html += '</tbody></table>';
+                        contentDiv.innerHTML = html;
+                    } else {
+                        contentDiv.innerHTML = `
+                            <div style="text-align: center; padding: 40px; color: #999;">
+                                <span class="material-icons-outlined" style="font-size: 48px; opacity: 0.3;">inbox</span>
+                                <p>Aucun historique d'import</p>
+                            </div>
+                        `;
+                    }
+                })
+                .catch(error => {
+                    contentDiv.innerHTML = `
+                        <div style="text-align: center; padding: 40px; color: #ef4444;">
+                            <span class="material-icons-outlined" style="font-size: 48px; opacity: 0.3;">error</span>
+                            <p>Erreur de chargement : ${error.message}</p>
+                        </div>
+                    `;
+                });
+        }
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') closeHistoryModal();
+        });
+    </script>
+{% endblock %}

@@ -1,0 +1,73 @@
+{% extends "layout.html" %}
+{% load static %}
+
+{% block title %}Paramètres - SupplyTrack{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Paramètres</h1>
+    <p>Configuration de la plateforme SupplyTrack</p>
+</div>
+
+<div class="card-container" style="max-width: 800px;">
+    <div class="profile-section">
+        <div class="section-title">Profil utilisateur</div>
+        
+        <div class="avatar-container">
+            <div class="avatar">MH</div>
+            <div class="user-details-brief">
+                <h3 class="user-name">{{ user_name }}</h3>
+                <p class="user-role">{{ user_role }}</p>
+            </div>
+        </div>
+
+        <form id="profileForm">
+            {% csrf_token %}
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="full_name">Nom complet</label>
+                    <input type="text" id="full_name" name="full_name" value="Hajjad abdessamad" disabled>
+                </div>
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" name="email" value="hajjad@ocpgroup.ma" disabled>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="department">Département</label>
+                    <input type="text" id="department" name="department" value="OCP" disabled>
+                </div>
+                <div class="form-group">
+                    <label for="role">Rôle</label>
+                    <input type="text" id="role" name="role" value="Admin" disabled>
+                </div>
+            </div>
+
+            <div class="status-message success" id="saveIndicator">
+                <span class="material-icons-outlined" style="vertical-align: middle; font-size: 18px; margin-right: 8px;">check_circle</span>
+                <span>Modifications enregistrées automatiquement</span>
+            </div>
+        </form>
+    </div>
+
+    <div class="footer-note" style="margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--border-color); color: var(--text-grey); font-size: 12px;">
+        Plateforme SupplyTrack - EMINES 
+    </div>
+</div>
+
+<script>
+    // Logic to handle auto-save if you decide to enable inputs later
+    const profileForm = document.getElementById('profileForm');
+    const saveIndicator = document.getElementById('saveIndicator');
+
+    // Example function to show feedback
+    function showSaveFeedback() {
+        saveIndicator.style.display = 'block';
+        setTimeout(() => {
+            saveIndicator.style.display = 'none';
+        }, 3000);
+    }
+</script>
+{% endblock %}

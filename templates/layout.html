@@ -1,0 +1,52 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Supply Track{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <link rel="icon" type="image/png" href="/static/imgs/supply.png" sizes="32x32">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet">
+</head>
+<body>
+   
+    <header id="header">
+        <img src="{% static 'imgs/ocp_logo.png' %}" id="ocp" alt="Logo">
+        <img src="{% static 'imgs/emines.png' %}" id="EMINES" alt="Logo">
+        <div class="user-badge">
+            <span class="user-name">M. Hajjad</span>
+            <span class="user-role">Responsable d'approvisionnement</span>
+        </div>
+    </header>
+    
+    <aside id="sideBar">
+        <a href="{% url 'dashboard' %}" class="{% if current_page == 'dashboard' %}active{% endif %}">
+            <span class="material-icons-outlined">assignment</span> dashboard
+        
+        </a>
+
+        <a href="{% url 'suivi_demandes' %}" class="{% if current_page == 'suivi' %}active{% endif %}">
+            <span class="material-icons-outlined">inventory_2</span> Suivi
+        </a>
+
+        <a href="{% url 'analyses' %}" class="{% if current_page == 'analyses' %}active{% endif %}">
+            <span class="material-icons-outlined">leaderboard</span> Analyses
+        </a>
+
+        <a href="{% url 'parametres' %}" class="{% if current_page == 'parametres' %}active{% endif %}">
+            <span class="material-icons-outlined">info</span> a propos
+        </a>
+
+        <a href="{% url 'help' %}" class="{% if current_page == 'help' %}active{% endif %}">
+            <span class="material-icons-outlined">assignment</span> help
+        </a>    
+    </aside>
+
+    <div id="content">
+        {% block content %}{% endblock %}
+    </div>
+
+</body>
+</html>

@@ -1,0 +1,342 @@
+{% extends "layout.html" %}
+{% load static %}
+
+{% block title %}Analyses - SupplyTrack{% endblock %}
+
+{% block content %}
+<div class="analyses-container">
+    
+    <!-- DATE FILTER SECTION -->
+    <div class="filter-card">
+        <h3 class="filter-title">📅 Filtrer par période</h3>
+        <form method="GET" action="{% url 'analyses' %}" class="date-filter-form">
+            <div class="filter-inputs">
+                <div class="filter-group">
+                    <label for="date_from">Date de début</label>
+                    <input type="date" 
+                           id="date_from" 
+                           name="date_from" 
+                           value="{{ date_from }}"
+                           class="date-input">
+                </div>
+                
+                <div class="filter-group">
+                    <label for="date_to">Date de fin</label>
+                    <input type="date" 
+                           id="date_to" 
+                           name="date_to" 
+                           value="{{ date_to }}"
+                           class="date-input">
+                </div>
+                
+                <div class="filter-actions">
+                    <button type="submit" class="btn-filter">
+                        🔍 Filtrer
+                    </button>
+                    <a href="{% url 'analyses' %}" class="btn-reset">
+                        🔄 Réinitialiser
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+    
+    
+    <!-- SECTION 1: Cartes Statistiques -->
+    <div class="stats-grid">
+        <div class="stat-card stat-ise">
+            <div class="stat-header">
+                <span class="stat-label">ISE</span>
+                <span class="stat-badge badge-green">{{ taux_da }}%</span>
+            </div>
+            <div class="stat-value">{{ total_ise }}</div>
+            <div class="stat-amount">{{ montant_total_ise|floatformat:2 }} MAD</div>
+        </div>
+        
+        <div class="stat-card stat-da">
+            <div class="stat-header">
+                <span class="stat-label">DA</span>
+                <span class="stat-badge badge-orange">{{ taux_ao }}%</span>
+            </div>
+            <div class="stat-value">{{ total_da }}</div>
+            <div class="stat-amount">{{ montant_total_da|floatformat:2 }} MAD</div>
+        </div>
+        
+        <div class="stat-card stat-ao">
+            <div class="stat-header">
+                <span class="stat-label">AO</span>
+                <span class="stat-badge badge-purple">{{ taux_ao }}%</span>
+            </div>
+            <div class="stat-value">{{ total_ao }}</div>
+            <div class="stat-amount">N/A</div>
+        </div>
+        
+        <div class="stat-card stat-cmd">
+            <div class="stat-header">
+                <span class="stat-label">Commandes</span>
+                <span class="stat-badge badge-blue">{{ taux_cmd }}%</span>
+            </div>
+            <div class="stat-value">{{ total_cmd }}</div>
+            <div class="stat-amount">{{ montant_total_cmd|floatformat:2 }} MAD</div>
+        </div>
+    </div>
+
+    <!-- SECTION 2: Graphique Barres - Nombre de documents -->
+    <div class="charts-row">
+        <div class="chart-card">
+            <h3 class="chart-title">Nombre de documents par étape</h3>
+            <canvas id="chartDocuments"></canvas>
+        </div>
+        
+        <div class="chart-card">
+            <h3 class="chart-title">Montants par étape</h3>
+            <canvas id="chartMontants"></canvas>
+        </div>
+    </div>
+
+    <!-- SECTION 3: Budget vs Commandes + Top Fournisseurs -->
+    <div class="analysis-row">
+        <div class="budget-comparison">
+            <h3 class="section-title">Comparaison Budget ISE vs Commandes</h3>
+            
+            <div class="budget-box budget-ise">
+                <span class="budget-label">Budget total ISE</span>
+                <div class="budget-value">{{ montant_total_ise|floatformat:2 }} MAD</div>
+            </div>
+            
+            <div class="budget-box budget-cmd">
+                <span class="budget-label">Montant total Commandes</span>
+                <div class="budget-value">{{ montant_total_cmd|floatformat:2 }} MAD</div>
+            </div>
+            
+            <div class="budget-box budget-ecart">
+                <span class="budget-label">Écart (Commande - ISE)</span>
+                <div class="budget-value ecart-value">
+                    {% if ecart_budget > 0 %}+{% endif %}{{ ecart_budget|floatformat:2 }} MAD
+                    <span class="ecart-icon">{% if ecart_budget > 0 %}📈{% else %}📉{% endif %}</span>
+                </div>
+                <div class="budget-subtitle">
+                    {% if pourcentage_ecart > 0 %}+{% endif %}{{ pourcentage_ecart|floatformat:1 }}% par rapport au budget initial
+                </div>
+            </div>
+        </div>
+
+        <div class="chart-card">
+            <h3 class="chart-title">Montants par étape (Graphique)</h3>
+            <canvas id="chartMontantsBar"></canvas>
+        </div>
+    </div>
+
+    <!-- SECTION 4: Top Fournisseurs -->
+    <div class="table-card">
+        <h3 class="section-title">Top Fournisseurs</h3>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>FOURNISSEUR</th>
+                    <th>NB COMMANDES</th>
+                    <th>NB CODES</th>
+                    <th>MONTANT TOTAL</th>
+                    <th>MONTANT MOYEN</th>
+                    <th>PART (%)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for fournisseur in top_fournisseurs %}
+                <tr>
+                    <td class="fw-bold">{{ fournisseur.fournisseur__designation_Fournisseur|default:"N/A" }}</td>
+                    <td>{{ fournisseur.nb_commandes }}</td>
+                    <td>{{ fournisseur.nb_codes }}</td>
+                    <td>{{ fournisseur.montant_total|floatformat:2 }} MAD</td>
+                    <td>{{ fournisseur.montant_moyen|floatformat:2 }} MAD</td>
+                    <td>
+                        <div class="progress-cell">
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: {{ fournisseur.pourcentage }}%"></div>
+                            </div>
+                            <span class="progress-text">{{ fournisseur.pourcentage }}%</span>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center">Aucune donnée disponible</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- SECTION 5: Répartition par Plant et Famille -->
+    <div class="distribution-row">
+        <div class="table-card">
+            <h3 class="section-title">Répartition par Plant</h3>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>CODE PLANT</th>
+                        <th>DÉSIGNATION</th>
+                        <th>NB ARTICLES</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for plant in repartition_plant %}
+                    <tr>
+                        <td class="fw-bold">{{ plant.plant__code_plant }}</td>
+                        <td>{{ plant.plant__designation_plant }}</td>
+                        <td>{{ plant.nb_articles }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="3" class="text-center">Aucune donnée</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="table-card">
+            <h3 class="section-title">Répartition par Famille</h3>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>FAMILLE</th>
+                        <th>NB ARTICLES</th>
+                        <th>MONTANT CMD</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for famille in repartition_famille %}
+                    <tr>
+                        <td class="fw-bold">{{ famille.famille__designation_famille|default:"Non défini" }}</td>
+                        <td>{{ famille.nb_articles }}</td>
+                        <td>{{ famille.montant_cmd|floatformat:2|default:"0.00" }} MAD</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="3" class="text-center">Aucune donnée</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+<script>
+// Configuration des couleurs
+const COLORS = {
+    ise: '#22c55e',
+    da: '#f97316',
+    ao: '#a855f7',
+    cmd: '#3b82f6'
+};
+
+// ========== GRAPHIQUE 1: Nombre de documents ==========
+const ctxDocuments = document.getElementById('chartDocuments').getContext('2d');
+new Chart(ctxDocuments, {
+    type: 'bar',
+    data: {
+        labels: {{ chart_documents.labels|safe }},
+        datasets: [{
+            label: 'Nombre de documents',
+            data: {{ chart_documents.values|safe }},
+            backgroundColor: [
+                COLORS.ise,
+                COLORS.da,
+                COLORS.ao,
+                COLORS.cmd
+            ],
+            borderRadius: 8
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {
+            legend: { display: false }
+        },
+        scales: {
+            y: { beginAtZero: true }
+        }
+    }
+});
+
+// ========== GRAPHIQUE 2: Montants par étape ==========
+const ctxMontantsBar = document.getElementById('chartMontantsBar').getContext('2d');
+new Chart(ctxMontantsBar, {
+    type: 'bar',
+    data: {
+        labels: {{ chart_montants.labels|safe }},
+        datasets: [{
+            label: 'Montant (MAD)',
+            data: {{ chart_montants.values|safe }},
+            backgroundColor: [
+                COLORS.ise,
+                COLORS.da,
+                COLORS.cmd
+            ],
+            borderRadius: 8
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {
+            legend: { display: false }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    callback: function(value) {
+                        return value.toLocaleString() + ' MAD';
+                    }
+                }
+            }
+        }
+    }
+});
+
+// ========== GRAPHIQUE 3: Montants détaillés ==========
+const ctxMontants = document.getElementById('chartMontants').getContext('2d');
+new Chart(ctxMontants, {
+    type: 'bar',
+    data: {
+        labels: {{ chart_montants.labels|safe }},
+        datasets: [{
+            label: 'Montant (MAD)',
+            data: {{ chart_montants.values|safe }},
+            backgroundColor: [
+                COLORS.ise,
+                COLORS.da,
+                COLORS.cmd
+            ],
+            borderRadius: 8
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {
+            legend: { display: false }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    callback: function(value) {
+                        return (value / 1000000).toFixed(1) + 'M';
+                    }
+                }
+            }
+        }
+    }
+});
+</script>
+
+{% endblock %}

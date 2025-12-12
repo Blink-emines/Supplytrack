@@ -1,0 +1,53 @@
+{% extends "layout.html" %}
+
+{% block title %}Tableau de bord - Supply Track{% endblock %}
+
+{% block content %}
+<div class="dashboard-header">
+    <div>
+        <h1>Tableau de bord</h1>
+        <p>Vue d'ensemble du suivi ISE → DA → AO → Commandes</p>
+    </div>
+</div>
+
+<div class="kpi-container">
+    <div class="card card-green">
+        <div class="card-icon"><span class="material-icons-outlined">description</span></div>
+        <div class="card-info"><h2>{{ total_ise }}</h2><p>ISE</p></div>
+    </div>
+    <div class="card card-orange">
+        <div class="card-icon"><span class="material-icons-outlined">inventory</span></div>
+        <div class="card-info"><h2>{{ total_da }}</h2><p>DA</p></div>
+    </div>
+    <div class="card card-purple">
+        <div class="card-icon"><span class="material-icons-outlined">trending_up</span></div>
+        <div class="card-info"><h2>{{ total_ao }}</h2><p>AO</p></div>
+    </div>
+    <div class="card card-blue">
+        <div class="card-icon"><span class="material-icons-outlined">shopping_cart</span></div>
+        <div class="card-info"><h2>{{ total_cmd }}</h2><p>Commandes</p></div>
+    </div>
+</div>
+
+<h3 class="section-title">Demandes récentes</h3>
+
+<div class="recent-list">
+    {% for item in demandes_recentes %}
+    <div class="list-item">
+        <div class="item-left">
+            <div class="item-icon"><span class="material-icons-outlined">receipt_long</span></div>
+            <div class="item-details">
+                <h4>
+                    ISE {{ item.id_ise }}
+                    <span class="badge">{{ item.statut }}</span>
+                </h4>
+                <small>{{ item.plant_code }} • {{ item.date }}</small>
+            </div>
+        </div>
+        <div class="price">{{ item.montant|floatformat:2 }} MAD</div>
+    </div>
+    {% empty %}
+    <p class="empty-msg">Aucune demande récente</p>
+    {% endfor %}
+</div>
+{% endblock %}
