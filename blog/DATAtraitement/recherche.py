@@ -124,29 +124,6 @@ def rechercher_da(code_da):
                         'Plant': rel_plant.plant.code_plant if rel_plant and rel_plant.plant else 'N/A',
                         'Désignation Plant': rel_plant.plant.designation_plant if rel_plant and rel_plant.plant else 'N/A'
                     })
-            else:
-                # Si aucun ISE, créer quand même une ligne
-                data.append({
-                    'Code': article.code_article,
-                    'Description': article.designation_article,
-                    'ID ISE': 'N/A',
-                    'Date ISE': None,
-                    'Qté ISE': None,
-                    'Mnt ISE': None,
-                    'DA': da_obj.id_DA,
-                    'Date DA': rel_da.date_DA,
-                    'Qté DA': rel_da.quantite_DA,
-                    'Mnt DA': rel_da.montant_DA,
-                    'AO': rel_ao.ao.id_AO if rel_ao and rel_ao.ao else 'N/A',
-                    'Date AO': rel_ao.date_AO if rel_ao else None,
-                    'CMD': rel_cmd.cde.id_Cde if rel_cmd and rel_cmd.cde else 'N/A',
-                    'Date CMD': rel_cmd.date_Cde if rel_cmd else None,
-                    'Qté CMD': rel_cmd.quantite_Cde if rel_cmd else None,
-                    'Mnt CMD': rel_cmd.montant_Cde if rel_cmd else None,
-                    'Fournisseur': rel_cmd.fournisseur.designation_Fournisseur if rel_cmd and rel_cmd.fournisseur else 'N/A',
-                    'Plant': rel_plant.plant.code_plant if rel_plant and rel_plant.plant else 'N/A',
-                    'Désignation Plant': rel_plant.plant.designation_plant if rel_plant and rel_plant.plant else 'N/A'
-                })
         
         return pd.DataFrame(data)
     except Exception as e:
