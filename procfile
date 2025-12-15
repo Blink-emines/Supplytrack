@@ -1,0 +1,1 @@
+web: gunicorn django_ocp_main.wsgi
