@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <link rel="icon" type="image/png" href="/static/imgs/supply.png" sizes="32x32">
     <title>Accès Sécurisé</title>
     <style>
         * {
@@ -46,6 +47,7 @@
             font-weight: 500;
         }
         
+        input[type="text"],
         input[type="password"] {
             width: 100%;
             padding: 12px;
@@ -55,6 +57,7 @@
             transition: border-color 0.3s;
         }
         
+        input[type="text"]:focus,
         input[type="password"]:focus {
             outline: none;
             border-color: #667eea;
@@ -96,7 +99,7 @@
 <body>
     <div class="login-container">
         <div class="lock-icon">🔒</div>
-        <h1>Accès Sécurisé</h1>
+        <h1>Supply track Security page</h1>
         
         {% if messages %}
             {% for message in messages %}
@@ -107,8 +110,12 @@
         <form method="post">
             {% csrf_token %}
             <div class="form-group">
+                <label for="user">Utilisateur</label>
+                <input type="text" id="user" name="user" required autofocus>
+            </div>
+            <div class="form-group">
                 <label for="password">Mot de passe</label>
-                <input type="password" id="password" name="password" required autofocus>
+                <input type="password" id="password" name="password" required>
             </div>
             <button type="submit">Entrer</button>
         </form>

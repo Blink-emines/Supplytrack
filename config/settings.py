@@ -43,17 +43,12 @@ INSTALLED_APPS = [
     "security",
     "anymail",
 ]
-ANYMAIL = {
-    # Paste the API Key you copied from the website
-    "SENDGRID_API_KEY": "SG.xxxxxxxx.xxxxxxxxx", 
-}
+
 
 # 3. Tell Django to use the API backend
-EMAIL_BACKEND = "anymail.backends.sendgrid.EmailBackend"
-
 # 4. default FROM email (so you don't have to type it every time)
-DEFAULT_FROM_EMAIL = "noreply@yourdomain.com"
-SECURITY_PASSWORD = '1234'  # Change this!
+SECURITY_PASSWORD = 'admin'  # Change this!
+SECURITY_USER = 'admin'  # Add this - change to your desired username
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 SESSION_COOKIE_AGE = 3600  # 1 hour in seconds
 
@@ -62,7 +57,7 @@ MIDDLEWARE = [
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
-    "whitenoise.middleware.WhiteNoiseMiddleware",
+    
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -88,7 +83,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'config.wsgi.application'
+
 
 
 # Database

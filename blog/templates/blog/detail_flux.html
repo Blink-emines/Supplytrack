@@ -1,5 +1,6 @@
 {% extends "layout.html" %}
 {% load static %}
+{% load money_filters %}
 
 {% block title %}Détails du flux - SupplyTrack{% endblock %}
 
@@ -25,14 +26,14 @@
         <div class="card-header"><div class="card-icon bg-ise">ISE</div><div class="card-label">ISE</div></div>
         <div class="data-row"><span class="data-label">ID</span><span class="data-value">{{ ise.id_ise }}</span></div>
         <div class="data-row"><span class="data-label">Date</span><span class="data-value">{{ rel_ise.date_ise|date:"d/m/Y" }}</span></div>
-        <div class="data-row"><span class="data-label">Montant</span><span class="data-value money text-green">{{ rel_ise.montant_ise|floatformat:2 }} MAD</span></div>
+        <div class="data-row"><span class="data-label">Montant</span><span class="data-value money text-green">{{ rel_ise.montant_ise|format_money }} MAD</span></div>
     </div>
 
     <div class="status-card card-da">
         <div class="card-header"><div class="card-icon bg-da">DA</div><div class="card-label">DA</div></div>
         <div class="data-row"><span class="data-label">ID</span><span class="data-value">{{ rel_da.da.id_DA|default:"N/A" }}</span></div>
         <div class="data-row"><span class="data-label">Date</span><span class="data-value">{{ rel_da.date_DA|date:"d/m/Y"|default:"-" }}</span></div>
-        <div class="data-row"><span class="data-label">Montant</span><span class="data-value money color-da">{{ rel_da.montant_DA|floatformat:2|default:"-" }} MAD</span></div>
+        <div class="data-row"><span class="data-label">Montant</span><span class="data-value money color-da">{{ rel_da.montant_DA|format_money|default:"-" }} MAD</span></div>
     </div>
 
     <div class="status-card card-ao">
@@ -45,7 +46,7 @@
         <div class="card-header"><div class="card-icon bg-cmd">CMD</div><div class="card-label">Commande</div></div>
         <div class="data-row"><span class="data-label">ID</span><span class="data-value">{{ rel_cmd.cde.id_Cde|default:"N/A" }}</span></div>
         <div class="data-row"><span class="data-label">Date</span><span class="data-value">{{ rel_cmd.date_Cde|date:"d/m/Y"|default:"-" }}</span></div>
-        <div class="data-row"><span class="data-label">Montant TTC</span><span class="data-value money text-blue">{{ rel_cmd.montant_Cde|floatformat:2|default:"-" }} MAD</span></div>
+        <div class="data-row"><span class="data-label">Montant TTC</span><span class="data-value money text-blue">{{ rel_cmd.montant_Cde|format_money|default:"-" }} MAD</span></div>
     </div>
 </div>
 
@@ -71,13 +72,13 @@
 <div class="financial-card">
     <h2 class="card-title">Récapitulatif financier</h2>
     <div class="financial-grid">
-        <div class="financial-item"><label>Budget estimé (ISE)</label><span class="item-value">{{ rel_ise.montant_ise|floatformat:2 }} MAD</span></div>
-        <div class="financial-item"><label>Budget DA</label><span class="item-value">{{ rel_da.montant_DA|floatformat:2|default:"0.00" }} MAD</span></div>
-        <div class="financial-item"><label>Montant Commande</label><span class="item-value">{{ rel_cmd.montant_Cde|floatformat:2|default:"0.00" }} MAD</span></div>
+        <div class="financial-item"><label>Budget estimé (ISE)</label><span class="item-value">{{ rel_ise.montant_ise|format_money }} MAD</span></div>
+        <div class="financial-item"><label>Budget DA</label><span class="item-value">{{ rel_da.montant_DA|format_money|default:"0,00" }} MAD</span></div>
+        <div class="financial-item"><label>Montant Commande</label><span class="item-value">{{ rel_cmd.montant_Cde|format_money|default:"0,00" }} MAD</span></div>
         <div class="financial-item">
             <label>Écart total</label>
             <span class="item-value {% if ecart_total > 0 %}value-red{% else %}value-green{% endif %}">
-                {% if ecart_total > 0 %}+{% endif %}{{ ecart_total|floatformat:2 }} MAD
+                {% if ecart_total > 0 %}+{% endif %}{{ ecart_total|format_money }} MAD
             </span>
         </div>
         <div class="financial-item"><label>Taux de réalisation</label><span class="item-value value-green">{{ taux_realisation|floatformat:1 }}%</span></div>

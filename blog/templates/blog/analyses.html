@@ -1,5 +1,6 @@
 {% extends "layout.html" %}
 {% load static %}
+{% load money_filters %}
 
 {% block title %}Analyses - SupplyTrack{% endblock %}
 
@@ -47,37 +48,37 @@
         <div class="stat-card stat-ise">
             <div class="stat-header">
                 <span class="stat-label">ISE</span>
-                <span class="stat-badge badge-green">{{ taux_da }}%</span>
+                
             </div>
             <div class="stat-value">{{ total_ise }}</div>
-            <div class="stat-amount">{{ montant_total_ise|floatformat:2 }} MAD</div>
+            <div class="stat-amount">{{ montant_total_ise|format_money }} MAD</div>
         </div>
         
         <div class="stat-card stat-da">
             <div class="stat-header">
                 <span class="stat-label">DA</span>
-                <span class="stat-badge badge-orange">{{ taux_ao }}%</span>
+                
             </div>
             <div class="stat-value">{{ total_da }}</div>
-            <div class="stat-amount">{{ montant_total_da|floatformat:2 }} MAD</div>
+            <div class="stat-amount">{{ montant_total_da|format_money }} MAD</div>
         </div>
         
         <div class="stat-card stat-ao">
             <div class="stat-header">
                 <span class="stat-label">AO</span>
-                <span class="stat-badge badge-purple">{{ taux_ao }}%</span>
+                
             </div>
             <div class="stat-value">{{ total_ao }}</div>
-            <div class="stat-amount">N/A</div>
+            <div class="stat-amount"></div>
         </div>
         
         <div class="stat-card stat-cmd">
             <div class="stat-header">
                 <span class="stat-label">Commandes</span>
-                <span class="stat-badge badge-blue">{{ taux_cmd }}%</span>
+                
             </div>
             <div class="stat-value">{{ total_cmd }}</div>
-            <div class="stat-amount">{{ montant_total_cmd|floatformat:2 }} MAD</div>
+            <div class="stat-amount">{{ montant_total_cmd|format_money }} MAD</div>
         </div>
     </div>
 
@@ -101,18 +102,18 @@
             
             <div class="budget-box budget-ise">
                 <span class="budget-label">Budget total ISE</span>
-                <div class="budget-value">{{ montant_total_ise|floatformat:2 }} MAD</div>
+                <div class="budget-value">{{ montant_total_ise|format_money }} MAD</div>
             </div>
             
             <div class="budget-box budget-cmd">
                 <span class="budget-label">Montant total Commandes</span>
-                <div class="budget-value">{{ montant_total_cmd|floatformat:2 }} MAD</div>
+                <div class="budget-value">{{ montant_total_cmd|format_money }} MAD</div>
             </div>
             
             <div class="budget-box budget-ecart">
                 <span class="budget-label">Écart (Commande - ISE)</span>
                 <div class="budget-value ecart-value">
-                    {% if ecart_budget > 0 %}+{% endif %}{{ ecart_budget|floatformat:2 }} MAD
+                    {% if ecart_budget > 0 %}+{% endif %}{{ ecart_budget|format_money }} MAD
                     <span class="ecart-icon">{% if ecart_budget > 0 %}📈{% else %}📉{% endif %}</span>
                 </div>
                 <div class="budget-subtitle">
@@ -147,8 +148,8 @@
                     <td class="fw-bold">{{ fournisseur.fournisseur__designation_Fournisseur|default:"N/A" }}</td>
                     <td>{{ fournisseur.nb_commandes }}</td>
                     <td>{{ fournisseur.nb_codes }}</td>
-                    <td>{{ fournisseur.montant_total|floatformat:2 }} MAD</td>
-                    <td>{{ fournisseur.montant_moyen|floatformat:2 }} MAD</td>
+                    <td>{{ fournisseur.montant_total|format_money }} MAD</td>
+                    <td>{{ fournisseur.montant_moyen|format_money }} MAD</td>
                     <td>
                         <div class="progress-cell">
                             <div class="progress-bar">
@@ -175,51 +176,28 @@
                 <thead>
                     <tr>
                         <th>CODE PLANT</th>
-                        <th>DÉSIGNATION</th>
                         <th>NB ARTICLES</th>
+                        
+                        
                     </tr>
                 </thead>
                 <tbody>
                     {% for plant in repartition_plant %}
                     <tr>
                         <td class="fw-bold">{{ plant.plant__code_plant }}</td>
-                        <td>{{ plant.plant__designation_plant }}</td>
+                      
                         <td>{{ plant.nb_articles }}</td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="3" class="text-center">Aucune donnée</td>
+                        <td colspan="2" class="text-center">Aucune donnée</td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
 
-        <div class="table-card">
-            <h3 class="section-title">Répartition par Famille</h3>
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>FAMILLE</th>
-                        <th>NB ARTICLES</th>
-                        <th>MONTANT CMD</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for famille in repartition_famille %}
-                    <tr>
-                        <td class="fw-bold">{{ famille.famille__designation_famille|default:"Non défini" }}</td>
-                        <td>{{ famille.nb_articles }}</td>
-                        <td>{{ famille.montant_cmd|floatformat:2|default:"0.00" }} MAD</td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="3" class="text-center">Aucune donnée</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+        
     </div>
 
 </div>
@@ -294,7 +272,7 @@ new Chart(ctxMontantsBar, {
                 beginAtZero: true,
                 ticks: {
                     callback: function(value) {
-                        return value.toLocaleString() + ' MAD';
+                        return value.toLocaleString('fr-FR') + ' MAD';
                     }
                 }
             }
@@ -330,7 +308,7 @@ new Chart(ctxMontants, {
                 beginAtZero: true,
                 ticks: {
                     callback: function(value) {
-                        return (value / 1000000).toFixed(1) + 'M';
+                        return (value / 1000000).toFixed(1).replace('.', ',') + 'M';
                     }
                 }
             }
