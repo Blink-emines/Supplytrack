@@ -74,7 +74,8 @@ def process_ise_data(fichier):
                 # Relation Plant-Article
                 Appartenir_P_A.objects.get_or_create(
                     plant=plant_obj,
-                    article=article_obj
+                    article=article_obj,
+                    ise=ise_obj
                 )
                 
                 # ✅ CORRECTION PRINCIPALE : Appartenir_A_I nécessite AO et Cde (non-null dans models)

@@ -81,7 +81,8 @@ def process_da_data(fichier):
                 # Relation Plant-Article
                 Appartenir_P_A.objects.get_or_create(
                     plant=plant_obj,
-                    article=article_obj
+                    article=article_obj,
+                    ise=ise_obj
                 )
                 
                 

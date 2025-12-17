@@ -28,7 +28,8 @@ def rechercher_ise(code_ise):
             
             # Chercher Plant
             rel_plant = Appartenir_P_A.objects.filter(
-                article=article
+                article=article,
+                ise=ise_obj
             ).select_related('plant').first()
             
             data.append({
@@ -96,10 +97,11 @@ def rechercher_da(code_da):
         
         for rel in relations:
             article = rel.article
-            
+            ise_obj=rel.ise
             # Récupérer les infos du plant
             rel_plant = Appartenir_P_A.objects.filter(
-                article=article
+                article=article,
+                ise=ise_obj
             ).select_related('plant').first()
             
             data.append({
@@ -166,10 +168,11 @@ def rechercher_ao(code_ao):
         
         for rel in relations:
             article = rel.article
-            
+            ise_obj=rel.ise
             # Chercher Plant
             rel_plant = Appartenir_P_A.objects.filter(
-                article=article
+                article=article,
+                ise=ise_obj
             ).select_related('plant').first()
             
             data.append({
@@ -237,10 +240,11 @@ def rechercher_cmd(code_cmd):
         
         for rel in relations:
             article = rel.article
-            
+            ise_obj=rel.ise
             # Chercher Plant
             rel_plant = Appartenir_P_A.objects.filter(
-                article=article
+                article=article,
+                ise=ise_obj
             ).select_related('plant').first()
             
             data.append({

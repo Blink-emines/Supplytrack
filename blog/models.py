@@ -31,15 +31,6 @@ class Article(models.Model):
 
 
 # 🔗 RELATION PLANT - ARTICLE
-class Appartenir_P_A(models.Model):
-    plant = models.ForeignKey(Plant, on_delete=models.CASCADE)
-    article = models.ForeignKey(Article, on_delete=models.CASCADE)
-
-    class Meta:
-        unique_together = ('plant', 'article')
-
-    def __str__(self):
-        return f"{self.plant} - {self.article}"
 
 
 # 📄 TABLE AO (Appel d’Offre)
@@ -126,6 +117,15 @@ class Appartenir(models.Model):
     def __str__(self):
         return f"{self.article} - ISE {self.ise} ({self.date_ise}) - {self.montant_ise} - {self.quantite_ise} - {self.destination}"
 
+class Appartenir_P_A(models.Model):
+    plant = models.ForeignKey(Plant, on_delete=models.CASCADE)
+    article = models.ForeignKey(Article, on_delete=models.CASCADE)
+    ise = models.ForeignKey(ISE, on_delete=models.CASCADE, related_name="ISE_article")
+
+    
+
+    def __str__(self):
+        return f"{self.plant} - {self.article}"
 
 
 class ImportHistory(models.Model):
