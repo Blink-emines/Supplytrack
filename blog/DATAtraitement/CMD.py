@@ -32,7 +32,7 @@ def process_cde_data(fichier):
         for _, row in df_cmd.iterrows():
             try:
                 nb_lignes += 1
-                
+                ise_obj = None
                 # ✅ NETTOYAGE STRICT
                 cmd_value = str(row["Commande"]).strip()
                 da_value = str(row["DA"]).strip() if pd.notna(row["DA"]) else None
@@ -54,7 +54,11 @@ def process_cde_data(fichier):
                 famille_obj, _ = Famille.objects.get_or_create(
                     designation_famille=row["SF"]
                 )
+                id_ise = str(row['ID ISE']).strip() if pd.notna(row['ID ISE']) else None
 
+                # Ligne 56-58 - MODIFIER :
+                if id_ise and id_ise not in ['', 'nan', 'None', 'N/A']:
+                    ise_obj, _ = ISE.objects.get_or_create(id_ise=id_ise)
                 # 3. ARTICLE
                 article_obj, _ = Article.objects.get_or_create(
                     code_article=row["CODE"],
@@ -103,11 +107,32 @@ def process_cde_data(fichier):
                 Commander.objects.create(
                     article=article_obj,
                     cde=cde_obj,
+                    ise=ise_obj,
+                    da = da_obj,
+                    ao = ao_obj,
                     fournisseur=fournisseur_obj,
                     montant_Cde=row["Montant Commande"],
                     quantite_Cde=row["Qte Commande"],
                     date_Cde=row["Date commande"]
                 )
+                Appartenir_A_I.objects.filter(
+                    article=article_obj,
+                    ise=ise_obj,
+                    da=da_obj,
+                    ao=ao_obj
+                ).update(cde=cde_obj)
+                Appartenir_A_D.objects.filter(
+                    article=article_obj,
+                    ise=ise_obj,
+                    da=da_obj,
+                    ao=ao_obj
+                ).update(cde=cde_obj)
+                Appartenir_A_A.objects.filter(
+                    article=article_obj,
+                    ise=ise_obj,
+                    da=da_obj,
+                    ao=ao_obj
+                ).update(cde=cde_obj)
 
                 print(f"✅ Commande {cmd_value} : Ligne ajoutée ({row['CODE']})")
 

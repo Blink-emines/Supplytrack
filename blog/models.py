@@ -69,7 +69,6 @@ class DA(models.Model):
 class ISE(models.Model):
     id_ise = models.CharField(max_length=50, unique=True)
     da = models.ForeignKey(DA, on_delete=models.CASCADE, related_name="demande_achat", null=True, blank=True)
-
     def __str__(self):
         # CORRECTION : On vérifie si self.da existe avant d'accéder à .id_DA
         da_display = self.da.id_DA if self.da else "Aucune DA"
@@ -100,6 +99,11 @@ class Fournisseur(models.Model):
 class Appartenir_A_I(models.Model):
     article = models.ForeignKey(Article, on_delete=models.CASCADE, related_name="article")
     ise = models.ForeignKey(ISE, on_delete=models.CASCADE, related_name="ISE")
+    da = models.ForeignKey(DA, on_delete=models.CASCADE, related_name="demande_achat_ise", 
+                          null=True, blank=True)
+    ao = models.ForeignKey(AO, on_delete=models.CASCADE, related_name="appel_offre_ise")
+    cde = models.ForeignKey(Cde, on_delete=models.CASCADE, related_name="commande_ise")
+
     montant_ise = models.DecimalField(max_digits=10, decimal_places=2)
     date_ise = models.DateField()
     quantite_ise = models.DecimalField(max_digits=10, decimal_places=2)
@@ -112,7 +116,12 @@ class Appartenir_A_I(models.Model):
 # 🔗 RELATION ARTICLE - DA
 class Appartenir_A_D(models.Model):
     article = models.ForeignKey(Article, on_delete=models.CASCADE, related_name="article1")
-    da = models.ForeignKey(DA, on_delete=models.CASCADE, related_name="demande_achat1")
+    da = models.ForeignKey(DA, on_delete=models.CASCADE, related_name="demande_achat1", 
+                          null=True, blank=True)
+    ise = models.ForeignKey(ISE, on_delete=models.CASCADE, related_name="ISE_da")
+    ao = models.ForeignKey(AO, on_delete=models.CASCADE, related_name="appel_offre_da")
+    cde = models.ForeignKey(Cde, on_delete=models.CASCADE, related_name="commande_da")
+
     montant_DA = models.DecimalField(max_digits=10, decimal_places=2)
     date_DA = models.DateField()
     quantite_DA = models.DecimalField(max_digits=10, decimal_places=2)
@@ -126,6 +135,10 @@ class Appartenir_A_D(models.Model):
 class Appartenir_A_A(models.Model):
     article = models.ForeignKey(Article, on_delete=models.CASCADE, related_name="article2")
     ao = models.ForeignKey(AO, on_delete=models.CASCADE, related_name="appel_offre2")
+    da = models.ForeignKey(DA, on_delete=models.CASCADE, related_name="demande_achat_ao", 
+                          null=True, blank=True)
+    ise = models.ForeignKey(ISE, on_delete=models.CASCADE, related_name="ISE_ao")
+    cde = models.ForeignKey(Cde, on_delete=models.CASCADE, related_name="commande_ao")
     date_AO = models.DateField()
 
     def __str__(self):
@@ -136,6 +149,11 @@ class Appartenir_A_A(models.Model):
 class Commander(models.Model):
     article = models.ForeignKey(Article, on_delete=models.CASCADE, related_name="article3")
     cde = models.ForeignKey(Cde, on_delete=models.CASCADE, related_name="commande")
+    ise = models.ForeignKey(ISE, on_delete=models.CASCADE, related_name="ISE_cmd")
+    da = models.ForeignKey(DA, on_delete=models.CASCADE, related_name="demande_achat_cmd", 
+                          null=True, blank=True)
+    ao = models.ForeignKey(AO, on_delete=models.CASCADE, related_name="appel_offre_cmd")
+
     fournisseur = models.ForeignKey(Fournisseur, on_delete=models.CASCADE, related_name="fournisseur")
     montant_Cde = models.DecimalField(max_digits=10, decimal_places=2)
     date_Cde = models.DateField()

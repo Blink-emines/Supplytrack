@@ -1,11 +1,13 @@
 import pandas as pd
 from .utils import *
-from blog.models import Plant, Famille, Article, AO, ISE, DA, Appartenir_P_A, Appartenir_A_I, ImportHistory  # ← AJOUT
+from blog.models import (
+    Plant, Famille, Article, AO, ISE, DA, Cde,
+    Appartenir_P_A, Appartenir_A_I, ImportHistory
+)
 
 def process_ise_data(fichier):
     nb_lignes = 0
     nb_erreurs = 0
-    erreurs_detail = []
     
     try:
         df_besoin_1 = pd.read_excel(fichier, sheet_name=0)
@@ -30,6 +32,7 @@ def process_ise_data(fichier):
             try:
                 nb_lignes += 1
                 
+                # Récupération de la DA si elle existe
                 da_value = str(row["DA_y"]).strip() if pd.notna(row["DA_y"]) else None
                 da_obj = None
                 
@@ -39,19 +42,23 @@ def process_ise_data(fichier):
                     except DA.DoesNotExist:
                         pass
 
+                # Création/récupération de l'ISE
                 ise_obj, exist_ise = ISE.objects.get_or_create(
                     id_ise=row["ID ISE"],
                     defaults={"da": da_obj}
                 )
 
+                # Mise à jour de la DA si l'ISE existe déjà et n'a pas de DA
                 if not exist_ise and da_obj is not None and ise_obj.da is None:
                     ise_obj.da = da_obj
                     ise_obj.save()
 
+                # Création/récupération de la famille
                 famille_obj, _ = Famille.objects.get_or_create(
                     designation_famille=row["SF"]
                 )
 
+                # Création/récupération de l'article
                 article_obj, _ = Article.objects.get_or_create(
                     code_article=row["Code"],
                     defaults={
@@ -61,32 +68,57 @@ def process_ise_data(fichier):
                     }
                 )
 
+                # Création/récupération du plant
                 plant_obj, _ = Plant.objects.get_or_create(
                     code_plant=row["plant_y"],
                     defaults={"designation_plant": row["designation plant_y"]}
                 )
 
+                # Relation Plant-Article
                 Appartenir_P_A.objects.get_or_create(
                     plant=plant_obj,
                     article=article_obj
                 )
-
-                Appartenir_A_I.objects.get_or_create(
+                
+                # ✅ CORRECTION PRINCIPALE : Appartenir_A_I nécessite AO et Cde (non-null dans models)
+                # Création d'un AO et d'une Cde par défaut si nécessaire
+                
+                # Récupérer ou créer un AO par défaut pour cet ISE
+                ao_id = f"AO_{row['ID ISE']}"
+                ao_obj, _ = AO.objects.get_or_create(id_AO=ao_id)
+                
+                # Récupérer ou créer une Cde par défaut pour cet ISE
+                cde_id = f"CDE_{row['ID ISE']}"
+                cde_obj, _ = Cde.objects.get_or_create(
+                    id_Cde=cde_id,
+                    defaults={"ao": ao_obj}
+                )
+                
+                # ✅ CORRECTION : Création de la relation Article-ISE avec tous les champs obligatoires
+                rel_ise, created = Appartenir_A_I.objects.get_or_create(
                     article=article_obj,
                     ise=ise_obj,
                     defaults={
+                        "da": da_obj,
+                        "ao": ao_obj,  # ← Champ obligatoire (ForeignKey sans null=True)
+                        "cde": cde_obj,  # ← Champ obligatoire (ForeignKey sans null=True)
                         "montant_ise": row["Montant ISE_y"],
                         "date_ise": row['Date ISE'],
                         "quantite_ise": row["Qte ISE"],
                         "destination": row["Déstination"]
                     }
                 )
+                
+                # ✅ Mise à jour du DA si l'enregistrement existe déjà et qu'un nouveau DA est disponible
+                if not created and da_obj is not None and rel_ise.da != da_obj:
+                    rel_ise.da = da_obj
+                    rel_ise.save()
 
             except Exception as e:
                 nb_erreurs += 1
-                
+                print(f"✗ Erreur ligne {nb_lignes}: {e}")
 
-        # ✅ ENREGISTRER L'HISTORIQUE
+        # Enregistrement de l'historique d'import
         ImportHistory.objects.create(
             type_fichier='ISE',
             nom_fichier=fichier.name,
@@ -95,7 +127,7 @@ def process_ise_data(fichier):
             statut='SUCCESS' if nb_erreurs == 0 else ('PARTIAL' if nb_erreurs < nb_lignes else 'ERROR'),
         )
         
-        print(f" Import ISE terminé : {nb_lignes} lignes, {nb_erreurs} erreurs")
+        print(f"✓ Import ISE terminé : {nb_lignes} lignes, {nb_erreurs} erreurs")
 
     except Exception as e:
         ImportHistory.objects.create(
@@ -104,6 +136,6 @@ def process_ise_data(fichier):
             nb_lignes_traitees=nb_lignes,
             nb_erreurs=nb_erreurs + 1,
             statut='ERROR',
-            
         )
-        print(f" Erreur critique ISE: {e}")
+        print(f"✗ Erreur critique ISE: {e}")
+        raise  # Re-lever l'exception pour le debugging

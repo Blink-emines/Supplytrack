@@ -1,4 +1,3 @@
-
 import pandas as pd
 from .utils import *
 from blog.models import Plant, Famille, Article, AO, ISE, DA, Cde, Fournisseur, Appartenir_P_A, Appartenir_A_I, Appartenir_A_D, Appartenir_A_A, Commander, ImportHistory  # ← AJOUT
@@ -35,9 +34,11 @@ def process_ao_data(fichier):
                 for art in articles_da:
                     article_obj = art.article
                     link, _ = Appartenir_A_A.objects.get_or_create(
-                    article=article_obj,
-                    ao=ao_obj,
-                )
+                        article=article_obj,
+                        ao=ao_obj,
+                        ise=art.ise   # 🔑 clé manquante
+                    )
+
 
                     if date_ao:
                         link.date_AO = date_ao

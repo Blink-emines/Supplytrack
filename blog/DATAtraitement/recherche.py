@@ -1,6 +1,12 @@
 from blog.models import ISE, DA, AO, Cde, Appartenir_A_I, Appartenir_A_D, Appartenir_A_A, Commander, Article, Appartenir_P_A
 import pandas as pd
 
+import pandas as pd
+from blog.models import (
+    ISE, Article, Appartenir_A_I, Appartenir_A_D, Appartenir_A_A,
+    Commander, Appartenir_P_A
+)
+
 def rechercher_ise(code_ise):
     """
     Recherche toutes les informations liées à un code ISE
@@ -13,7 +19,7 @@ def rechercher_ise(code_ise):
             return None
         
         relations_ise = Appartenir_A_I.objects.filter(ise=ise_obj).select_related(
-            'article', 'article__famille'
+            'article', 'article__famille','ise'
         )
         
         if not relations_ise.exists():
@@ -25,16 +31,19 @@ def rechercher_ise(code_ise):
             article = rel_ise.article
             
             # Chercher DA
-            rel_da = Appartenir_A_D.objects.filter(article=article).select_related('da').first()
+            rel_da = Appartenir_A_D.objects.filter(article=article,
+                                                   ise=ise_obj).select_related('da','ise').first()
             
             # Chercher AO
-            rel_ao = Appartenir_A_A.objects.filter(article=article).select_related('ao').first()
+            rel_ao = Appartenir_A_A.objects.filter(article=article,
+                                                   ise=ise_obj).select_related('ao','ise').first()
             
             # Chercher CMD
-            rel_cmd = Commander.objects.filter(article=article).select_related('cde', 'fournisseur').first()
+            rel_cmd = Commander.objects.filter(article=article,
+                                               ise=ise_obj).select_related('cde', 'fournisseur','ise').first()
             
             # Chercher Plant
-            rel_plant = Appartenir_P_A.objects.filter(article=article).select_related('plant').first()
+            rel_plant = Appartenir_P_A.objects.filter(article=article,).select_related('plant').first()
             
             data.append({
                 'Code': article.code_article,
@@ -64,7 +73,6 @@ def rechercher_ise(code_ise):
         print(f" Erreur lors de la recherche ISE: {e}")
         return None
 
-
 def rechercher_da(code_da):
     """
     Recherche toutes les informations liées à un code DA.
@@ -78,56 +86,92 @@ def rechercher_da(code_da):
             return None
         
         relations_da = Appartenir_A_D.objects.filter(da=da_obj).select_related(
-            'article', 'article__famille'
+            'article', 'article__famille', 'ise'
         )
         
         if not relations_da.exists():
-            print(f" DA {code_da} trouvé mais aucun article associé")
+            print(f"⚠️ DA {code_da} trouvé mais aucun article associé")
             return None
         
         data = []
+        cache_ises = {}
         
         for rel_da in relations_da:
             article = rel_da.article
+            code_art = article.code_article
+
+            # Cache des ISEs pour cet article
+            if code_art not in cache_ises:
+                tous_les_ises = list(Appartenir_A_D.objects.filter(
+                    article=article,
+                    da=da_obj
+                ).select_related('ise', 'da').order_by('id'))
+                cache_ises[code_art] = tous_les_ises
+            print(cache_ises)
+            ises_disponibles = cache_ises[code_art]
             
-            # Récupérer TOUS les ISE pour cet article
-            tous_les_ises = list(Appartenir_A_I.objects.filter(article=article).select_related('ise').order_by('id'))
+            # Récupérer le prochain ISE disponible
+            rel_ise = None
+            if len(ises_disponibles) > 0:
+                rel_ise = ises_disponibles.pop(0)
             
-            # Chercher AO, CMD, Plant (une seule fois)
-            rel_ao = Appartenir_A_A.objects.filter(article=article).select_related('ao').first()
-            rel_cmd = Commander.objects.filter(article=article).select_related('cde', 'fournisseur').first()
-            rel_plant = Appartenir_P_A.objects.filter(article=article).select_related('plant').first()
+            # ✅ Récupérer les infos ISE depuis Appartenir_A_I
+            rel_ise_info = None
+            if rel_ise and rel_ise.ise:
+                rel_ise_info = Appartenir_A_I.objects.filter(
+                    article=article,
+                    ise=rel_ise.ise
+                ).select_related('ise').first()
             
-            # 🟢 CRÉER UNE LIGNE POUR CHAQUE ISE
-            if tous_les_ises:
-                for rel_ise in tous_les_ises:
-                    data.append({
-                        'Code': article.code_article,
-                        'Description': article.designation_article,
-                        
-                        'ID ISE': rel_ise.ise.id_ise if rel_ise.ise else 'N/A',
-                        'Date ISE': rel_ise.date_ise,
-                        'Qté ISE': rel_ise.quantite_ise,
-                        'Mnt ISE': rel_ise.montant_ise,
-                        
-                        'DA': da_obj.id_DA,
-                        'Date DA': rel_da.date_DA,
-                        'Qté DA': rel_da.quantite_DA,
-                        'Mnt DA': rel_da.montant_DA,
-                        'AO': rel_ao.ao.id_AO if rel_ao and rel_ao.ao else 'N/A',
-                        'Date AO': rel_ao.date_AO if rel_ao else None,
-                        'CMD': rel_cmd.cde.id_Cde if rel_cmd and rel_cmd.cde else 'N/A',
-                        'Date CMD': rel_cmd.date_Cde if rel_cmd else None,
-                        'Qté CMD': rel_cmd.quantite_Cde if rel_cmd else None,
-                        'Mnt CMD': rel_cmd.montant_Cde if rel_cmd else None,
-                        'Fournisseur': rel_cmd.fournisseur.designation_Fournisseur if rel_cmd and rel_cmd.fournisseur else 'N/A',
-                        'Plant': rel_plant.plant.code_plant if rel_plant and rel_plant.plant else 'N/A',
-                        'Désignation Plant': rel_plant.plant.designation_plant if rel_plant and rel_plant.plant else 'N/A'
-                    })
+            # ✅ CORRECTION : Utiliser .first() pour obtenir un objet unique au lieu d'un QuerySet
+            rel_ao = Appartenir_A_A.objects.filter(
+                article=article,
+                da=da_obj
+            ).select_related('ao', 'da').first() # ← Ajout de .first()
+            
+            rel_cmd = Commander.objects.filter(
+                article=article,
+                da=da_obj
+            ).select_related('cde', 'fournisseur', 'da').first()
+            
+            rel_plant = Appartenir_P_A.objects.filter(
+                article=article
+            ).select_related('plant').first()
+            
+            data.append({
+                'Code': article.code_article,
+                'Description': article.designation_article,
+                
+                # ✅ Utiliser rel_ise_info (depuis Appartenir_A_I) pour les détails ISE
+                'ID ISE': rel_ise.ise.id_ise if rel_ise and rel_ise.ise else 'N/A',
+                'Date ISE': rel_ise_info.date_ise if rel_ise_info else None,
+                'Qté ISE': rel_ise_info.quantite_ise if rel_ise_info else None,
+                'Mnt ISE': rel_ise_info.montant_ise if rel_ise_info else None,
+                
+                'DA': da_obj.id_DA,
+                'Date DA': rel_da.date_DA,
+                'Qté DA': rel_da.quantite_DA,
+                'Mnt DA': rel_da.montant_DA,
+                
+                'AO': rel_ao.ao.id_AO if rel_ao and rel_ao.ao else 'N/A',
+                'Date AO': rel_ao.date_AO if rel_ao else None,
+                
+                'CMD': rel_cmd.cde.id_Cde if rel_cmd and rel_cmd.cde else 'N/A',
+                'Date CMD': rel_cmd.date_Cde if rel_cmd else None,
+                'Qté CMD': rel_cmd.quantite_Cde if rel_cmd else None,
+                'Mnt CMD': rel_cmd.montant_Cde if rel_cmd else None,
+                'Fournisseur': rel_cmd.fournisseur.designation_Fournisseur if rel_cmd and rel_cmd.fournisseur else 'N/A',
+                
+                'Plant': rel_plant.plant.code_plant if rel_plant and rel_plant.plant else 'N/A',
+                'Désignation Plant': rel_plant.plant.designation_plant if rel_plant and rel_plant.plant else 'N/A'
+            })
         
         return pd.DataFrame(data)
+        
     except Exception as e:
-        print(f" Erreur lors de la recherche DA: {e}")
+        print(f"💥 Erreur lors de la recherche DA: {e}")
+        import traceback
+        traceback.print_exc()  # Afficher la trace complète pour le debugging
         return None
 
 
@@ -143,7 +187,7 @@ def rechercher_ao(code_ao):
             return None
         
         relations_ao = Appartenir_A_A.objects.filter(ao=ao_obj).select_related(
-            'article', 'article__famille'
+            'article', 'article__famille','ise','ao'
         )
         
         if not relations_ao.exists():
@@ -151,17 +195,41 @@ def rechercher_ao(code_ao):
             return None
         
         data = []
+        cache_ises = {}
+
         for rel_ao in relations_ao:
             article = rel_ao.article
-            
+            code_art = article.code_article
             # Chercher ISE
-            rel_ise = Appartenir_A_I.objects.filter(article=article).select_related('ise').first()
+            if code_art not in cache_ises:
+                tous_les_ises = list(Appartenir_A_A.objects.filter(
+                    article=article,
+                    ao=ao_obj
+                ).select_related('ise', 'ao').order_by('id'))
+                cache_ises[code_art] = tous_les_ises
+            
+            ises_disponibles = cache_ises[code_art]
+            
+            # Récupérer le prochain ISE disponible
+            rel_ise = None
+            if len(ises_disponibles) > 0:
+                rel_ise = ises_disponibles.pop(0)
+            
+            # ✅ Récupérer les infos ISE depuis Appartenir_A_I
+            rel_ise_info = None
+            if rel_ise and rel_ise.ise:
+                rel_ise_info = Appartenir_A_I.objects.filter(
+                    article=article,
+                    ise=rel_ise.ise,
+                ).select_related('ise').first()
             
             # Chercher DA
-            rel_da = Appartenir_A_D.objects.filter(article=article).select_related('da').first()
+            rel_da = Appartenir_A_D.objects.filter(article=article,
+                                                    ao = ao_obj).select_related('da','ao').first()
             
             # Chercher CMD
-            rel_cmd = Commander.objects.filter(article=article).select_related('cde', 'fournisseur').first()
+            rel_cmd = Commander.objects.filter(article=article,
+                                                    ao = ao_obj).select_related('cde', 'fournisseur','ao').first()
             
             # Chercher Plant
             rel_plant = Appartenir_P_A.objects.filter(article=article).select_related('plant').first()
@@ -170,9 +238,9 @@ def rechercher_ao(code_ao):
                 'Code': article.code_article,
                 'Description': article.designation_article,
                 'ID ISE': rel_ise.ise.id_ise if rel_ise and rel_ise.ise else 'N/A',
-                'Date ISE': rel_ise.date_ise if rel_ise else None,
-                'Qté ISE': rel_ise.quantite_ise if rel_ise else None,
-                'Mnt ISE': rel_ise.montant_ise if rel_ise else None,
+                'Date ISE': rel_ise_info.date_ise if rel_ise_info else None,
+                'Qté ISE': rel_ise_info.quantite_ise if rel_ise_info else None,
+                'Mnt ISE': rel_ise_info.montant_ise if rel_ise_info else None,
                 'DA': rel_da.da.id_DA if rel_da and rel_da.da else 'N/A',
                 'Date DA': rel_da.date_DA if rel_da else None,
                 'Qté DA': rel_da.quantite_DA if rel_da else None,
@@ -196,83 +264,93 @@ def rechercher_ao(code_ao):
 
 def rechercher_cmd(code_cmd):
     """
-    Recherche CMD avec logique de "CONSOMMATION".
-    - 1ère ligne de commande -> prend le 1er ISE et l'enlève de la liste.
-    - 2ème ligne de commande -> prend le prochain ISE disponible.
+    Recherche toutes les informations liées à un code CMD.
+    Crée une ligne pour chaque combinaison Article-ISE.
     """
     try:
         cmd_obj = Cde.objects.filter(id_Cde=code_cmd).first()
         
         if not cmd_obj:
-            print(f" Aucune commande trouvée avec le code: {code_cmd}")
+            print(f"❌ Aucune commande trouvée avec le code: {code_cmd}")
             return None
         
-        # Récupérer toutes les relations Article-CMD pour ce code CMD
         relations_cmd = Commander.objects.filter(cde=cmd_obj).select_related(
-            'article', 'article__famille', 'fournisseur'
+            'article', 'article__famille', 'fournisseur', 'ise', 'da',
         )
         
         if not relations_cmd.exists():
-            print(f" CMD {code_cmd} trouvée mais aucun article associé")
+            print(f"⚠️ CMD {code_cmd} trouvée mais aucun article associé")
             return None
         
         data = []
-        
-        # 🟢 CRÉATION DU STOCK (CACHE)
-        # Ce dictionnaire va retenir quels ISE sont encore disponibles pour chaque article
-        # Clé = Code Article, Valeur = Liste des objets ISE
         cache_ises = {}
-
+        
         for rel_cmd in relations_cmd:
             article = rel_cmd.article
             code_art = article.code_article
 
-            # 1. Si on n'a pas encore chargé les ISE pour cet article, on le fait maintenant
             if code_art not in cache_ises:
-                # On récupère TOUS les ISE liés à cet article et on les met dans une liste
-                tous_les_ises = list(Appartenir_A_I.objects.filter(article=article).select_related('ise').order_by('id'))
+                tous_les_ises = list(Commander.objects.filter(
+                    article=article,
+                    cde=cmd_obj
+                ).select_related('ise', 'cde').order_by('id'))
                 cache_ises[code_art] = tous_les_ises
-
-            # 2. On récupère la liste des ISE restants pour cet article
+            
             ises_disponibles = cache_ises[code_art]
             
-            # 3. LOGIQUE DE CONSOMMATION (Le cœur de ta demande)
             rel_ise = None
             if len(ises_disponibles) > 0:
-                # .pop(0) prend le PREMIER élément de la liste et le SUPPRIME de la liste
-                # Donc au prochain tour de boucle, cet ISE ne sera plus là !
                 rel_ise = ises_disponibles.pop(0)
             else:
-                # Plus d'ISE disponible (cas où il y a plus de lignes de commande que d'ISE)
                 rel_ise = None
-
-            # ---------------------------------------
-            # Le reste (DA, AO, Plant) reste classique (.first)
-            rel_da = Appartenir_A_D.objects.filter(article=article).select_related('da').first()
-            rel_ao = Appartenir_A_A.objects.filter(article=article).select_related('ao').first()
-            rel_plant = Appartenir_P_A.objects.filter(article=article).select_related('plant').first()
+            
+            # ✅ Récupérer les infos ISE depuis Appartenir_A_I
+            rel_ise_info = None
+            if rel_ise and rel_ise.ise:
+                rel_ise_info = Appartenir_A_I.objects.filter(
+                    article=article,
+                    ise=rel_ise.ise,
+                ).select_related('ise', 'cde').first()
+            
+            # Chercher DA, AO, Plant (une seule fois)
+            rel_da = Appartenir_A_D.objects.filter(
+                article=article,
+                cde=cmd_obj  # ✅ CORRECTION: 'cde' au lieu de 'cmd'
+            ).select_related('da', 'cde').first()
+            
+            rel_ao = Appartenir_A_A.objects.filter(
+                article=article,
+                cde=cmd_obj  # ✅ CORRECTION: 'cde' au lieu de 'cmd'
+            ).select_related('ao', 'cde').first()
+            
+            rel_plant = Appartenir_P_A.objects.filter(
+                article=article
+            ).select_related('plant').first()
             
             data.append({
                 'Code': article.code_article,
                 'Description': article.designation_article,
                 
-                # Ici on utilise l'ISE qu'on vient de "tirer" de la liste
-                'ID ISE': rel_ise.ise.id_ise if rel_ise else 'N/A',
-                'Date ISE': rel_ise.date_ise if rel_ise else None,
-                'Qté ISE': rel_ise.quantite_ise if rel_ise else None,
-                'Mnt ISE': rel_ise.montant_ise if rel_ise else None,
+                # ✅ Utiliser rel_ise_info (depuis Appartenir_A_I) pour les détails ISE
+                'ID ISE': rel_ise.ise.id_ise if rel_ise and rel_ise.ise else 'N/A',
+                'Date ISE': rel_ise_info.date_ise if rel_ise_info else None,
+                'Qté ISE': rel_ise_info.quantite_ise if rel_ise_info else None,
+                'Mnt ISE': rel_ise_info.montant_ise if rel_ise_info else None,
                 
                 'DA': rel_da.da.id_DA if rel_da and rel_da.da else 'N/A',
                 'Date DA': rel_da.date_DA if rel_da else None,
                 'Qté DA': rel_da.quantite_DA if rel_da else None,
                 'Mnt DA': rel_da.montant_DA if rel_da else None,
+                
                 'AO': rel_ao.ao.id_AO if rel_ao and rel_ao.ao else 'N/A',
                 'Date AO': rel_ao.date_AO if rel_ao else None,
+                
                 'CMD': cmd_obj.id_Cde,
                 'Date CMD': rel_cmd.date_Cde,
                 'Qté CMD': rel_cmd.quantite_Cde,
                 'Mnt CMD': rel_cmd.montant_Cde,
                 'Fournisseur': rel_cmd.fournisseur.designation_Fournisseur if rel_cmd.fournisseur else 'N/A',
+                
                 'Plant': rel_plant.plant.code_plant if rel_plant and rel_plant.plant else 'N/A',
                 'Désignation Plant': rel_plant.plant.designation_plant if rel_plant and rel_plant.plant else 'N/A'
             })
@@ -280,8 +358,11 @@ def rechercher_cmd(code_cmd):
         return pd.DataFrame(data)
         
     except Exception as e:
-        print(f"❌ Erreur lors de la recherche CMD: {e}")
+        print(f"💥 Erreur lors de la recherche CMD: {e}")
+        import traceback
+        traceback.print_exc()
         return None
+
 
 def rechercher_interactif():
     """

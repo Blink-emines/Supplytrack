@@ -72,7 +72,11 @@ def analyses(request):
     # For AO - need to get through DA relationship
     da_ids = appartenir_da_qs.values_list('da_id', flat=True).distinct()
     ao_ids = DA.objects.filter(id__in=da_ids).values_list('ao_id', flat=True).distinct()
-    total_ao = AO.objects.filter(id__in=ao_ids).count()
+    total_ao = AO.objects.filter(
+        appel_offre_da__isnull=False
+    ).exclude(
+        id_AO__startswith="AO_DA_"
+    ).distinct().count()
     
     # For Commandes
     total_cmd = commander_qs.values('cde').distinct().count()
@@ -307,15 +311,21 @@ def recherche_view(request):
             context['error'] = "Veuillez remplir tous les champs."
 
     return render(request, 'blog/recherche_interface.html', context)
-from django.db.models import Sum
+from django.db.models import Sum,Count
 
 from django.db.models import Sum, Max
 
 def dashboard_view(request):
-    total_ise = ISE.objects.count()
-    total_da = DA.objects.count()
-    total_ao = AO.objects.count()
-    total_cmd = Cde.objects.count()
+    total_ise = ISE.objects.values('id_ise').distinct().count()
+    total_da = DA.objects.values('id_DA').distinct().count()
+
+    total_ao = AO.objects.filter(
+        appel_offre_da__isnull=False
+    ).exclude(
+        id_AO__startswith="AO_DA_"
+    ).distinct().count()
+    commander_qs = Commander.objects.all()
+    total_cmd = commander_qs.values('cde').distinct().count()
 
     # Récupérer les ISE avec leur date la plus récente, triées par date décroissante
     ises_with_dates = Appartenir_A_I.objects.values('ise').annotate(
