@@ -1,10 +1,7 @@
+
 import pandas as pd
 from .utils import *
-from blog.models import (
-    Plant, Famille, Article, AO, ISE, DA, Cde, Fournisseur,
-    Appartenir_P_A, Appartenir_A_I, Appartenir_A_D, Appartenir_A_A, Commander,
-    ImportHistory
-)
+from blog.models import *
 
 def process_da_data(fichier):
     nb_lignes = 0
@@ -87,44 +84,18 @@ def process_da_data(fichier):
                     article=article_obj
                 )
                 
-                # ✅ CORRECTION : Création de la relation Article-AO si AO existe
-                # Dans le modèle Appartenir_A_A, les champs obligatoires sont:
-                # - article, ao, ise, cde, date_AO (da est nullable)
-                if ao_obj :
-                    Appartenir_A_A.objects.get_or_create(
-                        article=article_obj,
-                        ao=ao_obj,
-                        ise=ise_obj,
-                        defaults={
-                            "da": da_obj,
-                            "cde": None,
-                            "date_AO": row['Date DA']  # Utiliser la date DA comme date AO par défaut
-                        }
-                    )
-                
-                # ✅ CORRECTION PRINCIPALE : Appartenir_A_D nécessite ISE, AO et Cde (non-null)
-                # Vérifier que tous les objets requis existent
-                
-                
-                
-                
-                # Créer ou récupérer une Cde par défaut
-                
                 
                 # ✅ Création de la relation Article-DA avec tous les champs obligatoires
-                Appartenir_A_D.objects.get_or_create(
-                    article=article_obj,
-                    da=da_obj,
-                    defaults={
-                        "ise": ise_obj,  # ← Champ obligatoire
-                        "ao": ao_obj,    # ← Champ obligatoire
-                        "cde": None,  # ← Champ obligatoire
-                        "montant_DA": row["Montant"],
-                        "date_DA": row['Date DA'],
-                        "quantite_DA": row["Qte DA"],
-                        "destination": row["Déstination"]
-                    }
-                )
+                Appartenir.objects.filter(
+                        article=article_obj,
+                        ise=ise_obj
+                    ).update(
+                        da=da_obj,
+                        ao=ao_obj,
+                        montant_DA=row["Montant"],
+                        date_DA=row['Date DA'],
+                        quantite_DA=row["Qte DA"]
+                    )
 
             except Exception as e:
                 nb_erreurs += 1

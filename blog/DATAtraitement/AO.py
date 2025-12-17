@@ -1,6 +1,6 @@
 import pandas as pd
 from .utils import *
-from blog.models import Plant, Famille, Article, AO, ISE, DA, Cde, Fournisseur, Appartenir_P_A, Appartenir_A_I, Appartenir_A_D, Appartenir_A_A, Commander, ImportHistory  # ← AJOUT
+from blog.models import *
 
 def process_ao_data(fichier):
     nb_lignes = 0
@@ -29,20 +29,11 @@ def process_ao_data(fichier):
                     defaults={"ao": ao_obj}
                 )
                 
-                articles_da = Appartenir_A_D.objects.filter(da=da_obj)
-
-                for art in articles_da:
-                    article_obj = art.article
-                    link, _ = Appartenir_A_A.objects.get_or_create(
-                        article=article_obj,
-                        ao=ao_obj,
-                        ise=art.ise   # 🔑 clé manquante
+                Appartenir.objects.filter(
+                        ao = ao_obj
+                    ).update(
+                        date_AO = date_ao
                     )
-
-
-                    if date_ao:
-                        link.date_AO = date_ao
-                        link.save()
 
                                    
 

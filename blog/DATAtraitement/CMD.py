@@ -1,8 +1,7 @@
 import pandas as pd
 from .utils import *
 from django.utils import timezone
-from blog.models import Plant, Famille, Article, AO, ISE, DA, Cde, Fournisseur, Appartenir_P_A, Appartenir_A_I, Appartenir_A_D, Appartenir_A_A, Commander, ImportHistory
-
+from blog.models import *
 def process_cde_data(fichier):
     nb_lignes = 0
     nb_erreurs = 0
@@ -103,38 +102,21 @@ def process_cde_data(fichier):
                     designation_Fournisseur=row["Fournisseur"]
                 )
 
-                # 9. ENREGISTRER LA RELATION COMMANDE
-                Commander.objects.create(
+                
+                Appartenir.objects.filter(
                     article=article_obj,
-                    cde=cde_obj,
                     ise=ise_obj,
-                    da = da_obj,
-                    ao = ao_obj,
+                    da=da_obj,
+                    ao=ao_obj
+                ).update(
+                    cde=cde_obj,  # ← Virgule manquante ajoutée
                     fournisseur=fournisseur_obj,
                     montant_Cde=row["Montant Commande"],
                     quantite_Cde=row["Qte Commande"],
                     date_Cde=row["Date commande"]
                 )
-                Appartenir_A_I.objects.filter(
-                    article=article_obj,
-                    ise=ise_obj,
-                    da=da_obj,
-                    ao=ao_obj
-                ).update(cde=cde_obj)
-                Appartenir_A_D.objects.filter(
-                    article=article_obj,
-                    ise=ise_obj,
-                    da=da_obj,
-                    ao=ao_obj
-                ).update(cde=cde_obj)
-                Appartenir_A_A.objects.filter(
-                    article=article_obj,
-                    ise=ise_obj,
-                    da=da_obj,
-                    ao=ao_obj
-                ).update(cde=cde_obj)
-
-                print(f"✅ Commande {cmd_value} : Ligne ajoutée ({row['CODE']})")
+                
+                
 
             except Exception as e:
                 nb_erreurs += 1

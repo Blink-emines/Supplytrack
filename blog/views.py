@@ -1,6 +1,6 @@
 from django.shortcuts import render, get_object_or_404
 from .DATAtraitement.services import data_service  # Import du singleton
-from .models import ISE, AO, DA, Cde,Article, Appartenir_A_I, Appartenir_A_D, Appartenir_A_A, Commander, Appartenir_P_A
+from .models import *
 from datetime import datetime
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -49,10 +49,10 @@ def analyses(request):
     date_to = request.GET.get('date_to')
     
     # Base querysets
-    appartenir_ise_qs = Appartenir_A_I.objects.all()
-    appartenir_da_qs = Appartenir_A_D.objects.all()
-    appartenir_ao_qs = Appartenir_A_A.objects.all()
-    commander_qs = Commander.objects.all()
+    appartenir_ise_qs = Appartenir.objects.all()
+    appartenir_da_qs = Appartenir.objects.all()
+    appartenir_ao_qs = Appartenir.objects.all()
+    commander_qs = Appartenir.objects.all()
     
     # Apply date filters if provided
     # For ISE - date_ise is directly on Appartenir_A_I model
@@ -69,28 +69,28 @@ def analyses(request):
         appartenir_ao_qs = appartenir_ao_qs.filter(date_AO__lte=date_to)
     
     # Get distinct ISE, DA, AO, Cde counts from filtered querysets
-    total_ise = appartenir_ise_qs.values('ise').distinct().count()
-    total_da = appartenir_da_qs.values('da').distinct().count()
-    total_ao = appartenir_ao_qs.values('ao').distinct().count()
+    total_ise = appartenir_ise_qs.filter(ise__isnull=False).values('ise').distinct().count()
+    total_da = appartenir_da_qs.filter(da__isnull=False).values('da').distinct().count()
+    total_ao = appartenir_ao_qs.filter(ao__isnull=False).values('ao').distinct().count()
     # For AO - need to get through DA relationship
     
     
     
     # For Commandes
-    total_cmd = commander_qs.values('cde').distinct().count()
+    total_cmd = commander_qs.filter(cde__isnull=False).values('cde').distinct().count()
     
     # ========== MONTANTS TOTAUX PAR ÉTAPE ==========
     montant_total_ise = appartenir_ise_qs.aggregate(
         total=Sum('montant_ise')
-    )['total'] or 0
+    )['total'] or Decimal('0')
     
     montant_total_da = appartenir_da_qs.aggregate(
         total=Sum('montant_DA')
-    )['total'] or 0
+    )['total'] or Decimal('0')
     
     montant_total_cmd = commander_qs.aggregate(
         total=Sum('montant_Cde')
-    )['total'] or 0
+    )['total'] or Decimal('0')
     
     # ========== TAUX DE CONVERSION ==========
     # Pourcentage DA/ISE
@@ -120,8 +120,8 @@ def analyses(request):
     for fournisseur in top_fournisseurs:
         if montant_total_cmd > 0:
             fournisseur['pourcentage'] = round(
-                (fournisseur['montant_total'] / montant_total_cmd * 100), 1
-            )
+            (float(fournisseur['montant_total'] or 0) / float(montant_total_cmd) * 100), 1
+        )
         else:
             fournisseur['pourcentage'] = 0
     
@@ -153,7 +153,7 @@ def analyses(request):
         montant_cmd=Sum(F('montant_Cde') * F('quantite_Cde'))
     )
     # ========== RÉPARTITION PAR ARTICLE DEMANDE ==========
-    top_articles_raw = Appartenir_A_I.objects.filter(
+    top_articles_raw = Appartenir.objects.filter(
         date_ise__range=[date_from, date_to]
     ).values(
         'article__code_article',
@@ -229,7 +229,7 @@ def analyses(request):
     # Graphique ligne : Top 5 fournisseurs
     chart_fournisseurs_labels = [f['fournisseur__designation_Fournisseur'] or 'N/A' 
                                    for f in top_fournisseurs[:5]]
-    chart_fournisseurs_values = [float(f['montant_total']) for f in top_fournisseurs[:5]]
+    chart_fournisseurs_values = [float(f['montant_total'] or 0) for f in top_fournisseurs[:5]]
     
     context = {
         'current_page': 'analyses',
@@ -350,7 +350,7 @@ def dashboard_view(request):
     total_cmd = Cde.objects.distinct().count()
 
     # Récupérer les ISE avec leur date la plus récente, triées par date décroissante
-    ises_with_dates = Appartenir_A_I.objects.values('ise').annotate(
+    ises_with_dates = Appartenir.objects.values('ise').annotate(
         date_max=Max('date_ise')
     ).order_by('-date_max')[:5]
     
@@ -367,7 +367,7 @@ def dashboard_view(request):
 
     for ise_obj in recent_ises:
         # Récupérer tous les articles de cette ISE
-        articles_ise = Appartenir_A_I.objects.filter(ise=ise_obj).select_related('article')
+        articles_ise = Appartenir.objects.filter(ise=ise_obj).select_related('article')
         
         if not articles_ise.exists():
             continue
@@ -393,20 +393,19 @@ def dashboard_view(request):
         
         
         # Vérifier si AU MOINS UN article a une COMMANDE
-        has_commande = Commander.objects.filter(
-            ise=ise_obj
-        ).exists()
+        has_commande = articles_ise.filter(cde__isnull=False).exists()
         
         if has_commande:
             statut = "Validée"
         else:
-            # Vérifier si AU MOINS UN article a une DA
-            has_da = Appartenir_A_D.objects.filter(
-                ise=ise_obj
-            ).exists()
+            # 2. Sinon, vérifier si AU MOINS UN article possède une DA
+            has_da = articles_ise.filter(da__isnull=False).exists()
             
             if has_da:
                 statut = "En cours de traitement"
+            else:
+                # 3. Si ni Cde ni DA ne sont renseignées
+                statut = "En attente"
 
         demandes_recentes.append({
             'id_ise': ise_obj.id_ise,
@@ -475,7 +474,7 @@ def detail_flux(request, id_flux, id_ise, id_da, id_ao, id_cmd):
     udm = 'N/A'
     
     if id_ise and id_ise not in ['0', 'N/A']:
-        objet_ise = Appartenir_A_I.objects.filter(
+        objet_ise = Appartenir.objects.filter(
             ise__id_ise=id_ise,
             article__code_article=id_flux
         ).select_related('article').first()
@@ -491,7 +490,7 @@ def detail_flux(request, id_flux, id_ise, id_da, id_ao, id_cmd):
     montant_da = 0
     
     if id_da and id_da not in ['0', 'N/A']:
-        objet_da = Appartenir_A_D.objects.filter(
+        objet_da = Appartenir.objects.filter(
             da__id_DA=id_da,
             article__code_article=id_flux
         ).select_related('da').first()
@@ -504,7 +503,7 @@ def detail_flux(request, id_flux, id_ise, id_da, id_ao, id_cmd):
     date_ao = None
     
     if id_ao and id_ao not in ['0', 'N/A']:
-        objet_ao = Appartenir_A_A.objects.filter(
+        objet_ao = Appartenir.objects.filter(
             ao__id_AO=id_ao,
             article__code_article=id_flux
         ).select_related('ao').first()
@@ -518,7 +517,7 @@ def detail_flux(request, id_flux, id_ise, id_da, id_ao, id_cmd):
     fournisseur_nom = '-'
 
     if id_cmd and id_cmd not in ['0', 'N/A']:
-        objet_cmd = Commander.objects.filter(
+        objet_cmd = Appartenir.objects.filter(
             cde__id_Cde=id_cmd,
             article__code_article=id_flux
         ).select_related('cde', 'fournisseur').first()

@@ -1,9 +1,6 @@
 import pandas as pd
 from .utils import *
-from blog.models import (
-    Plant, Famille, Article, AO, ISE, DA, Cde,
-    Appartenir_P_A, Appartenir_A_I, ImportHistory
-)
+from blog.models import *
 
 def process_ise_data(fichier):
     nb_lignes = 0
@@ -86,8 +83,9 @@ def process_ise_data(fichier):
                 # Récupérer ou créer un AO par défaut pour cet ISE
                 
                 
+                
                 # ✅ CORRECTION : Création de la relation Article-ISE avec tous les champs obligatoires
-                rel_ise, created = Appartenir_A_I.objects.get_or_create(
+                rel_ise, created = Appartenir.objects.get_or_create(
                     article=article_obj,
                     ise=ise_obj,
                     defaults={
@@ -97,6 +95,14 @@ def process_ise_data(fichier):
                         "montant_ise": row["Montant ISE_y"],
                         "date_ise": row['Date ISE'],
                         "quantite_ise": row["Qte ISE"],
+                        "montant_DA": None,
+                        "date_DA": None,
+                        "quantite_DA": None,
+                        "date_AO": None ,
+                        "fournisseur" : None,
+                        "montant_Cde" : None,
+                        "quantite_Cde" : None,
+                        "date_Cde" :None,
                         "destination": row["Déstination"]
                     }
                 )
