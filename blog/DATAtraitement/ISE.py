@@ -84,15 +84,7 @@ def process_ise_data(fichier):
                 # Création d'un AO et d'une Cde par défaut si nécessaire
                 
                 # Récupérer ou créer un AO par défaut pour cet ISE
-                ao_id = f"AO_{row['ID ISE']}"
-                ao_obj, _ = AO.objects.get_or_create(id_AO=ao_id)
                 
-                # Récupérer ou créer une Cde par défaut pour cet ISE
-                cde_id = f"CDE_{row['ID ISE']}"
-                cde_obj, _ = Cde.objects.get_or_create(
-                    id_Cde=cde_id,
-                    defaults={"ao": ao_obj}
-                )
                 
                 # ✅ CORRECTION : Création de la relation Article-ISE avec tous les champs obligatoires
                 rel_ise, created = Appartenir_A_I.objects.get_or_create(
@@ -100,8 +92,8 @@ def process_ise_data(fichier):
                     ise=ise_obj,
                     defaults={
                         "da": da_obj,
-                        "ao": ao_obj,  # ← Champ obligatoire (ForeignKey sans null=True)
-                        "cde": cde_obj,  # ← Champ obligatoire (ForeignKey sans null=True)
+                        "ao": None,  # ← Champ obligatoire (ForeignKey sans null=True)
+                        "cde": None,  # ← Champ obligatoire (ForeignKey sans null=True)
                         "montant_ise": row["Montant ISE_y"],
                         "date_ise": row['Date ISE'],
                         "quantite_ise": row["Qte ISE"],

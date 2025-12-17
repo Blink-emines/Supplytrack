@@ -135,10 +135,9 @@
             <thead>
                 <tr>
                     <th>FOURNISSEUR</th>
-                    <th>NB COMMANDES</th>
-                    <th>NB CODES</th>
+                    <th>NOMBRE DE COMMANDES</th>
+                    <th>NOMBRE D'ARTICLE</th>
                     <th>MONTANT TOTAL</th>
-                    <th>MONTANT MOYEN</th>
                     <th>PART (%)</th>
                 </tr>
             </thead>
@@ -149,7 +148,6 @@
                     <td>{{ fournisseur.nb_commandes }}</td>
                     <td>{{ fournisseur.nb_codes }}</td>
                     <td>{{ fournisseur.montant_total|format_money }} MAD</td>
-                    <td>{{ fournisseur.montant_moyen|format_money }} MAD</td>
                     <td>
                         <div class="progress-cell">
                             <div class="progress-bar">
@@ -167,35 +165,44 @@
             </tbody>
         </table>
     </div>
+    <div class="table-card">
+        <h3 class="section-title">Top Articles</h3>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>CODE ARTICLE</th>
+                    <th>DESIGNATION</th>
+                    <th>UDM</th>
+                    <th>FAMILLE</th>
+                    <th>NOMBRE ISE</th>
+                    <th>QUANTITE TOTALE</th>
+                    <th>MONTANT TOTAL</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for article in top_articles %}
+                <tr>
+                    <td>{{ article.code }}</td>
+                    <td class="fw-bold">{{ article.designation}}</td>
+                    <td>{{article.udm}} </td>
+                    <td>{{ article.famille }}</td>
+                    
+                    <td>{{ article.nb_ise }}</td>
+                    <td>{{ article.quantite|format_money  }} </td>
+                    <td>{{ article.montant|format_money  }}MAD</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center">Aucune donnée disponible</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
 
     <!-- SECTION 5: Répartition par Plant et Famille -->
-    <div class="distribution-row">
-        <div class="table-card">
-            <h3 class="section-title">Répartition par Plant</h3>
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>CODE PLANT</th>
-                        <th>NB ARTICLES</th>
-                        
-                        
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for plant in repartition_plant %}
-                    <tr>
-                        <td class="fw-bold">{{ plant.plant__code_plant }}</td>
-                      
-                        <td>{{ plant.nb_articles }}</td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="2" class="text-center">Aucune donnée</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+    
 
         
     </div>

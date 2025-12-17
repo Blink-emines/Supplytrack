@@ -51,6 +51,7 @@ def analyses(request):
     # Base querysets
     appartenir_ise_qs = Appartenir_A_I.objects.all()
     appartenir_da_qs = Appartenir_A_D.objects.all()
+    appartenir_ao_qs = Appartenir_A_A.objects.all()
     commander_qs = Commander.objects.all()
     
     # Apply date filters if provided
@@ -59,24 +60,21 @@ def analyses(request):
         appartenir_ise_qs = appartenir_ise_qs.filter(date_ise__gte=date_from)
         appartenir_da_qs = appartenir_da_qs.filter(date_DA__gte=date_from)
         commander_qs = commander_qs.filter(date_Cde__gte=date_from)
+        appartenir_ao_qs = appartenir_ao_qs.filter(date_AO__gte=date_from)
     
     if date_to:
         appartenir_ise_qs = appartenir_ise_qs.filter(date_ise__lte=date_to)
         appartenir_da_qs = appartenir_da_qs.filter(date_DA__lte=date_to)
         commander_qs = commander_qs.filter(date_Cde__lte=date_to)
+        appartenir_ao_qs = appartenir_ao_qs.filter(date_AO__lte=date_to)
     
     # Get distinct ISE, DA, AO, Cde counts from filtered querysets
     total_ise = appartenir_ise_qs.values('ise').distinct().count()
     total_da = appartenir_da_qs.values('da').distinct().count()
-    
+    total_ao = appartenir_ao_qs.values('ao').distinct().count()
     # For AO - need to get through DA relationship
-    da_ids = appartenir_da_qs.values_list('da_id', flat=True).distinct()
-    ao_ids = DA.objects.filter(id__in=da_ids).values_list('ao_id', flat=True).distinct()
-    total_ao = AO.objects.filter(
-        appel_offre_da__isnull=False
-    ).exclude(
-        id_AO__startswith="AO_DA_"
-    ).distinct().count()
+    
+    
     
     # For Commandes
     total_cmd = commander_qs.values('cde').distinct().count()
@@ -128,6 +126,7 @@ def analyses(request):
             fournisseur['pourcentage'] = 0
     
     # ========== RÉPARTITION PAR PLANT ==========
+    
     repartition_plant = Appartenir_P_A.objects.filter(
         article__in=commander_qs.values_list('article', flat=True)
     ).values(
@@ -153,6 +152,32 @@ def analyses(request):
     ).annotate(
         montant_cmd=Sum(F('montant_Cde') * F('quantite_Cde'))
     )
+    # ========== RÉPARTITION PAR ARTICLE DEMANDE ==========
+    top_articles_raw = Appartenir_A_I.objects.filter(
+        date_ise__range=[date_from, date_to]
+    ).values(
+        'article__code_article',
+        'article__designation_article',
+        'article__famille__designation_famille',
+        'article__udm'
+    ).annotate(
+        nb_ise=Count('ise', distinct=True),
+        quantite_totale=Sum('quantite_ise'),
+        montant_total=Sum('montant_ise')
+    ).order_by('-quantite_ise')[:5]
+    
+    top_articles = []
+    for a in top_articles_raw:
+        top_articles.append({
+            'code': a['article__code_article'],
+            'designation': a['article__designation_article'] or 'N/A',
+            'famille': a['article__famille__designation_famille'] or 'N/A',
+            'udm': a['article__udm'] or '',
+            'nb_ise': a['nb_ise'],
+            'quantite': float(a['quantite_totale'] or 0),
+            'montant': float(a['montant_total'] or 0)
+        })
+
     
     # Merge the data
     famille_dict = {}
@@ -235,12 +260,14 @@ def analyses(request):
         'top_fournisseurs': top_fournisseurs,
         'repartition_plant': repartition_plant,
         'repartition_famille': repartition_famille,
+        'top_articles': top_articles,
         
         # Données pour graphiques (JSON)
         'chart_documents': chart_documents,
         'chart_montants': chart_montants,
         'chart_fournisseurs_labels': chart_fournisseurs_labels,
         'chart_fournisseurs_values': chart_fournisseurs_values,
+        
     }
     
     return render(request, 'blog/analyses.html', context)
@@ -316,21 +343,16 @@ from django.db.models import Sum,Count
 from django.db.models import Sum, Max
 
 def dashboard_view(request):
-    total_ise = ISE.objects.values('id_ise').distinct().count()
-    total_da = DA.objects.values('id_DA').distinct().count()
+    total_ise = ISE.objects.distinct().count()
+    total_da = DA.objects.distinct().count()
 
-    total_ao = AO.objects.filter(
-        appel_offre_da__isnull=False
-    ).exclude(
-        id_AO__startswith="AO_DA_"
-    ).distinct().count()
-    commander_qs = Commander.objects.all()
-    total_cmd = commander_qs.values('cde').distinct().count()
+    total_ao = AO.objects.distinct().count()
+    total_cmd = Cde.objects.distinct().count()
 
     # Récupérer les ISE avec leur date la plus récente, triées par date décroissante
     ises_with_dates = Appartenir_A_I.objects.values('ise').annotate(
         date_max=Max('date_ise')
-    ).order_by('-date_max')[:10]
+    ).order_by('-date_max')[:5]
     
     # Extraire les IDs des ISE
     ise_ids = [item['ise'] for item in ises_with_dates]
@@ -368,12 +390,11 @@ def dashboard_view(request):
         # 🌟 Détermination du statut
         statut = "En attente"
         
-        # Récupérer les IDs des articles de cette ISE
-        article_ids = [rel.article.id for rel in articles_ise]
+        
         
         # Vérifier si AU MOINS UN article a une COMMANDE
         has_commande = Commander.objects.filter(
-            article_id__in=article_ids
+            ise=ise_obj
         ).exists()
         
         if has_commande:
@@ -381,7 +402,7 @@ def dashboard_view(request):
         else:
             # Vérifier si AU MOINS UN article a une DA
             has_da = Appartenir_A_D.objects.filter(
-                article_id__in=article_ids
+                ise=ise_obj
             ).exists()
             
             if has_da:
@@ -461,7 +482,7 @@ def detail_flux(request, id_flux, id_ise, id_da, id_ao, id_cmd):
         
         if objet_ise:
             date_ise = objet_ise.date_ise 
-            montant_ise = objet_ise.montant_ise * objet_ise.quantite_ise
+            montant_ise = objet_ise.montant_ise 
             destination_val = objet_ise.destination
             udm_val = article_obj.udm
 
@@ -477,7 +498,7 @@ def detail_flux(request, id_flux, id_ise, id_da, id_ao, id_cmd):
         
         if objet_da:
             date_da = objet_da.date_DA 
-            montant_da = objet_da.montant_DA * objet_da.quantite_DA if hasattr(objet_da, 'montant_DA') else 0
+            montant_da = objet_da.montant_DA 
 
     # --- 3. GESTION DE L'AO ---
     date_ao = None
@@ -504,7 +525,7 @@ def detail_flux(request, id_flux, id_ise, id_da, id_ao, id_cmd):
 
         if objet_cmd:
             date_cmd = objet_cmd.date_Cde
-            montant_cmd = objet_cmd.montant_Cde * objet_cmd.quantite_Cde
+            montant_cmd = objet_cmd.montant_Cde
             if objet_cmd.fournisseur:
                 fournisseur_nom = objet_cmd.fournisseur.designation_Fournisseur
     code_plant = 'N/A'

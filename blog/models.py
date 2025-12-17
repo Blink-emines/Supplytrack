@@ -98,11 +98,14 @@ class Fournisseur(models.Model):
 # 🔗 RELATION ARTICLE - ISE
 class Appartenir_A_I(models.Model):
     article = models.ForeignKey(Article, on_delete=models.CASCADE, related_name="article")
-    ise = models.ForeignKey(ISE, on_delete=models.CASCADE, related_name="ISE")
+    ise = models.ForeignKey(ISE, on_delete=models.CASCADE, related_name="ISE", 
+                          null=True, blank=True)
     da = models.ForeignKey(DA, on_delete=models.CASCADE, related_name="demande_achat_ise", 
                           null=True, blank=True)
-    ao = models.ForeignKey(AO, on_delete=models.CASCADE, related_name="appel_offre_ise")
-    cde = models.ForeignKey(Cde, on_delete=models.CASCADE, related_name="commande_ise")
+    ao = models.ForeignKey(AO, on_delete=models.CASCADE, related_name="appel_offre_ise", 
+                          null=True, blank=True)
+    cde = models.ForeignKey(Cde, on_delete=models.CASCADE, related_name="commande_ise", 
+                          null=True, blank=True)
 
     montant_ise = models.DecimalField(max_digits=10, decimal_places=2)
     date_ise = models.DateField()
@@ -118,9 +121,12 @@ class Appartenir_A_D(models.Model):
     article = models.ForeignKey(Article, on_delete=models.CASCADE, related_name="article1")
     da = models.ForeignKey(DA, on_delete=models.CASCADE, related_name="demande_achat1", 
                           null=True, blank=True)
-    ise = models.ForeignKey(ISE, on_delete=models.CASCADE, related_name="ISE_da")
-    ao = models.ForeignKey(AO, on_delete=models.CASCADE, related_name="appel_offre_da")
-    cde = models.ForeignKey(Cde, on_delete=models.CASCADE, related_name="commande_da")
+    ise = models.ForeignKey(ISE, on_delete=models.CASCADE, related_name="ISE_da", 
+                          null=True, blank=True)
+    ao = models.ForeignKey(AO, on_delete=models.CASCADE, related_name="appel_offre_da", 
+                          null=True, blank=True)
+    cde = models.ForeignKey(Cde, on_delete=models.CASCADE, related_name="commande_da", 
+                          null=True, blank=True)
 
     montant_DA = models.DecimalField(max_digits=10, decimal_places=2)
     date_DA = models.DateField()
@@ -134,11 +140,14 @@ class Appartenir_A_D(models.Model):
 # 🔗 RELATION ARTICLE - AO
 class Appartenir_A_A(models.Model):
     article = models.ForeignKey(Article, on_delete=models.CASCADE, related_name="article2")
-    ao = models.ForeignKey(AO, on_delete=models.CASCADE, related_name="appel_offre2")
+    ao = models.ForeignKey(AO, on_delete=models.CASCADE, related_name="appel_offre2", 
+                          null=True, blank=True)
     da = models.ForeignKey(DA, on_delete=models.CASCADE, related_name="demande_achat_ao", 
                           null=True, blank=True)
-    ise = models.ForeignKey(ISE, on_delete=models.CASCADE, related_name="ISE_ao")
-    cde = models.ForeignKey(Cde, on_delete=models.CASCADE, related_name="commande_ao")
+    ise = models.ForeignKey(ISE, on_delete=models.CASCADE, related_name="ISE_ao", 
+                          null=True, blank=True)
+    cde = models.ForeignKey(Cde, on_delete=models.CASCADE, related_name="commande_ao", 
+                          null=True, blank=True)
     date_AO = models.DateField()
 
     def __str__(self):
@@ -148,11 +157,14 @@ class Appartenir_A_A(models.Model):
 # 🔗 RELATION COMMANDE - ARTICLE - FOURNISSEUR
 class Commander(models.Model):
     article = models.ForeignKey(Article, on_delete=models.CASCADE, related_name="article3")
-    cde = models.ForeignKey(Cde, on_delete=models.CASCADE, related_name="commande")
-    ise = models.ForeignKey(ISE, on_delete=models.CASCADE, related_name="ISE_cmd")
+    cde = models.ForeignKey(Cde, on_delete=models.CASCADE, related_name="commande", 
+                          null=True, blank=True)
+    ise = models.ForeignKey(ISE, on_delete=models.CASCADE, related_name="ISE_cmd", 
+                          null=True, blank=True)
     da = models.ForeignKey(DA, on_delete=models.CASCADE, related_name="demande_achat_cmd", 
                           null=True, blank=True)
-    ao = models.ForeignKey(AO, on_delete=models.CASCADE, related_name="appel_offre_cmd")
+    ao = models.ForeignKey(AO, on_delete=models.CASCADE, related_name="appel_offre_cmd", 
+                          null=True, blank=True)
 
     fournisseur = models.ForeignKey(Fournisseur, on_delete=models.CASCADE, related_name="fournisseur")
     montant_Cde = models.DecimalField(max_digits=10, decimal_places=2)

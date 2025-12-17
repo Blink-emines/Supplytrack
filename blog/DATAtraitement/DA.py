@@ -90,50 +90,26 @@ def process_da_data(fichier):
                 # ✅ CORRECTION : Création de la relation Article-AO si AO existe
                 # Dans le modèle Appartenir_A_A, les champs obligatoires sont:
                 # - article, ao, ise, cde, date_AO (da est nullable)
-                if ao_obj and ise_obj:
-                    # Créer ou récupérer une Cde par défaut pour cet AO
-                    cde_id = f"CDE_{id_ao}" if id_ao else f"CDE_DA_{id_da}"
-                    cde_obj, _ = Cde.objects.get_or_create(
-                        id_Cde=cde_id,
-                        defaults={"ao": ao_obj}
-                    )
-                    
+                if ao_obj :
                     Appartenir_A_A.objects.get_or_create(
                         article=article_obj,
                         ao=ao_obj,
                         ise=ise_obj,
                         defaults={
                             "da": da_obj,
-                            "cde": cde_obj,
+                            "cde": None,
                             "date_AO": row['Date DA']  # Utiliser la date DA comme date AO par défaut
                         }
                     )
                 
                 # ✅ CORRECTION PRINCIPALE : Appartenir_A_D nécessite ISE, AO et Cde (non-null)
                 # Vérifier que tous les objets requis existent
-                if not ise_obj:
-                    # Créer un ISE par défaut si manquant
-                    ise_id = f"ISE_DA_{id_da}"
-                    ise_obj, _ = ISE.objects.get_or_create(
-                        id_ise=ise_id,
-                        defaults={"da": da_obj}
-                    )
                 
-                if not ao_obj:
-                    # Créer un AO par défaut si manquant
-                    ao_id = f"AO_DA_{id_da}"
-                    ao_obj, _ = AO.objects.get_or_create(id_AO=ao_id)
-                    
-                    # Mettre à jour la DA avec le nouvel AO
-                    da_obj.ao = ao_obj
-                    da_obj.save()
+                
+                
                 
                 # Créer ou récupérer une Cde par défaut
-                cde_id = f"CDE_DA_{id_da}"
-                cde_obj, _ = Cde.objects.get_or_create(
-                    id_Cde=cde_id,
-                    defaults={"ao": ao_obj}
-                )
+                
                 
                 # ✅ Création de la relation Article-DA avec tous les champs obligatoires
                 Appartenir_A_D.objects.get_or_create(
@@ -142,7 +118,7 @@ def process_da_data(fichier):
                     defaults={
                         "ise": ise_obj,  # ← Champ obligatoire
                         "ao": ao_obj,    # ← Champ obligatoire
-                        "cde": cde_obj,  # ← Champ obligatoire
+                        "cde": None,  # ← Champ obligatoire
                         "montant_DA": row["Montant"],
                         "date_DA": row['Date DA'],
                         "quantite_DA": row["Qte DA"],
