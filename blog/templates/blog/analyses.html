@@ -202,7 +202,32 @@
     
 
     <!-- SECTION 5: Répartition par Plant et Famille -->
-    
+    <div class="table-card">
+        <h3 class="section-title">Répartition par Plant</h3>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>PLANT</th>
+                    <th>DESIGNATION</th>
+                    <th>NOMBRE D'ARTICLES</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for plant in repartition_plant %}
+                <tr>
+                    <td>{{ plant.plant__code_plant }}</td>
+                    <td>{{plant.plant__designation_plant}} </td>
+                    <td>{{ plant.nb_articles }}</td>
+
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center">Aucune donnée disponible</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 
         
     </div>

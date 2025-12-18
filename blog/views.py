@@ -127,9 +127,7 @@ def analyses(request):
     
     # ========== RÉPARTITION PAR PLANT ==========
     
-    repartition_plant = Appartenir_P_A.objects.filter(
-        article__in=commander_qs.values_list('article', flat=True)
-    ).values(
+    repartition_plant = Appartenir_P_A.objects.values(
         'plant__code_plant',
         'plant__designation_plant'
     ).annotate(
